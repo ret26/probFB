@@ -1,38 +1,52 @@
+
+function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
+
 %
-% function  [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalmansmooth(A,C,Q,R,x0,P0,Y);
+% function  [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalman(A,C,Q,R,x0,P0,Y,verbose,KF);
 % 
-% Kalman Smoother
+% Implements Kalman Smoothing or Kalman Filtering. Optionally returns
+% the sufficient statistics of the Gaussian LDS. Based on Zoubin's
+% code. Modified by Richard Turner.
 %
 % x_{t}|x_{t-1} ~ Norm(A x_{t-1},Q)
 % y_{t}|x_{t} ~ Norm(C x_{t},R) 
 % x_1 ~ Norm(x0,P0)  
 % 
-% INPUTS  
-% A = Dynamical Matrix [K,K]
-% C = Emission Matrices  [p,K]
-% Q = State innovations noise [K,K]
-% R = Emission Noise = [p,p]  
-% x0 = initial state mean [K,1]
-% P0 = initial state covariance [K,K]  
-% Y = Data [N,p,T] 
+% INPUTS:
+% A = Dynamical Matrix, size [K,K]
+% C = Emission Matrices, size  [D,K]
+% Q = State innovations noise, size [K,K]
+% R = Emission Noise, size [D,D]  
+% x0 = initial state mean, size [K,1]
+% P0 = initial state covariance, size [K,K]  
+% Y = Data, size [N,D,T] 
+%
+% OPTIONAL INPUTS:
+% verbose = binary scalar, if set to 1 displays progress
+%           information
+% KF = binary scalar, if set to 1 carries out Kalman Filtering
+%      rather than Kalman smoothing. Cannot return the sufficient
+%      statistics in this case i.e. Ptsum, YX, A1, A2 and A3.
 %
 % OUTPUTS
 % lik = likelihood
-% Xfin = posterior means [N,K,T]
-% Pfin = posterior covariance [K,K,T]
-% Ptsum = \sum_{t=1}^T <x_{k t} x_{k' t}> [K,K]
-% YX = \sum_{t=1}^T y_{t}<x_{k t}> [p,K]
-% A1 = \sum_{t=2}^T <x_{k t} x_{k' t-1}> [K,K] 
-% A2 = \sum_{t=2}^T <x_{k t-1} x_{k' t-1}> [K,K]
-% A3 = \sum_{t=2}^T <x_{k t} x_{k' t}> [K,K]
+% Xfin = posterior means, size [N,K,T]
+% Pfin = posterior covariance, size [K,K,T]
+%
+% OPTIONAL OUTPUTS:
+% Ptsum = \sum_{t=1}^T <x_{k t} x_{k' t}>, size [K,K]
+% YX = \sum_{t=1}^T y_{t}<x_{k t}>, size [D,K]
+% A1 = \sum_{t=2}^T <x_{k t} x_{k' t-1}>, size [K,K] 
+% A2 = \sum_{t=2}^T <x_{k t-1} x_{k' t-1}>, size [K,K]
+% A3 = \sum_{t=2}^T <x_{k t} x_{k' t}>, size [K,K]
+%
 
-function  [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalmansmooth(A,C,Q,R,x0,P0,Y);
 
-[N p T]=size(Y);
+[N D T]=size(Y);
 K=length(x0);
 tiny=exp(-700);
 I=eye(K);
-const=(2*pi)^(-p/2);
+const=(2*pi)^(-D/2);
 problem=0;
 lik=0;
 
@@ -46,38 +60,62 @@ Pfin=zeros(K,K,T);
 
 Pt=zeros(K,K); 
 Pcov=zeros(K,K); 
-Kcur=zeros(K,p);
-invP=zeros(p,p);
+Kcur=zeros(K,D);
+invP=zeros(D,D);
 J=zeros(K,K,T);
 
+if nargin<=7
+  verbose = 0 ;
+else
+  verbose = varargin{1};
+end
+
+if nargin<=8
+  KF = 0 ;
+else
+  KF = varargin{2};
+end
+
+if verbose==1
+  if KF==1
+    disp('Kalman Filtering')
+  else
+    disp('Kalman Smoothing')
+  end
+end
 %%%%%%%%%%%%%%%
 % FORWARD PASS
 
-R=R+(R==0)*tiny;
+%R=R+(R==0)*tiny;
+invR=inv(R);
 
 Xpre=ones(N,1)*x0';
 Ppre(:,:,1)=P0;
-invR=diag(1./R);
 
 CntInt=T/5; % T / 2*number of progress values displayed
 
 for t=1:T,
-  if mod(t-1,CntInt)==0
-    disp(['Progress ',num2str(floor(50*t/T)),'%'])
+
+  if verbose==1&mod(t-1,CntInt)==0
+    fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
   end
     
     
-  if (K<p)
-    temp1=rdiv(C,R);
+  if (K<D)
+    temp1= R\C;%  rdiv(C,R);
     temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
     temp3=C'*temp2;
-    temp4=inv(I+temp3)*temp1';
+   % temp4=inv(I+temp3)*temp1';
+    temp4=(I+temp3)\temp1';
+
     invP=invR-temp2*temp4; 
     CP= temp1' - temp3*temp4;    % C'*invP
   else
-    temp1=diag(R)+C*Ppre(:,:,t)*C';
+%    temp1=diag(R)+C*Ppre(:,:,t)*C';
+    temp1=R+C*Ppre(:,:,t)*C';
     invP=inv(temp1);
-    CP=C'*invP;
+%    CP=C'*invP;
+    CP=C'/temp1;
   end;
   Kcur=Ppre(:,:,t)*CP;
   KC=Kcur*C;
@@ -90,69 +128,101 @@ for t=1:T,
   end;
 
   % calculate likelihood
-  detiP=sqrt(det(invP));
-  if (isreal(detiP) & detiP>0)
-    lik=lik+N*log(detiP)-0.5*sum(sum(Ydiff.*(Ydiff*invP)));
-  else
-    problem=1;
-  end;
+  
+  % Old version of the code
+  %  detiP=sqrt(det(invP));
+  % if (isreal(detiP) & detiP>0)
+  %   lik=lik+N*log(detiP)-0.5*sum(sum(Ydiff.*(Ydiff*invP)));
+  % else
+  %   problem=1;
+  % end;
+
+  logdetiP=sum(log(diag(chol(invP))));
+  lik=lik+N*logdetiP-0.5*sum(sum(Ydiff.*(Ydiff*invP)));
+
 end;  
 
 lik=lik+N*T*log(const);
 
-%%%%%%%%%%%%%%%
-% BACKWARD PASS
+% Figure out whether the user wants to do Kalman Smoothing or
+% Kalman Filtering
 
-A1=zeros(K);
-A2=zeros(K);
-A3=zeros(K);
-Ptsum=zeros(K);
-YX=zeros(p,K);
+if KF==1
+  % Only Kalman filtering
+
+  Xfin=Xcur;
+  Pfin=Pcur; 
+else
+  % Kalman Filtering
   
-t=T; 
-Xfin(:,:,t)=Xcur(:,:,t);
-Pfin(:,:,t)=Pcur(:,:,t); 
-Pt=Pfin(:,:,t) + Xfin(:,:,t)'*Xfin(:,:,t)/N; 
-A2= -Pt;
-Ptsum=Pt;
+  %%%%%%%%%%%%%%%
+  % BACKWARD PASS
+  
+  t=T; 
+  Xfin(:,:,t)=Xcur(:,:,t);
+  Pfin(:,:,t)=Pcur(:,:,t); 
+      
+  for t=(T-1):-1:1
+    if verbose==1&mod(t+1,CntInt)==0
+      fprintf(['Progress ',num2str(50+floor(50*(T-t+1)/T)),'%%','\r'])
+    end
+    
+    J(:,:,t)=Pcur(:,:,t)*A'/Ppre(:,:,t+1);
+    Xfin(:,:,t)=Xcur(:,:,t)+(Xfin(:,:,t+1)-Xcur(:,:,t)*A')*J(:,:,t)';
+    Pfin(:,:,t)=Pcur(:,:,t)+J(:,:,t)*(Pfin(:,:,t+1)-Ppre(:,:,t+1))*J(:,:,t)';
+    
+  end;
+end
 
-YX=Y(:,:,t)'*Xfin(:,:,t);
+% If the user requests the additional sufficient statistics
+if nargout>3&KF==1
 
-for t=(T-1):-1:1
-  if mod(t+1,CntInt)==0
-    disp(['Progress ',num2str(50+floor(50*(T-t+1)/T)),'%'])
+  disp('Error: Have not implemented sufficient statistics computation for Kalman Filtering')
+  return;
+else
+  
+  A1=zeros(K);
+  A2=zeros(K);
+  A3=zeros(K);
+  Ptsum=zeros(K);
+  YX=zeros(D,K);    
+    
+  Pt = Pfin(:,:,T) + Xfin(:,:,T)'*Xfin(:,:,T)/N; 
+  A2 = -Pt;
+  Ptsum = Pt;    
+  YX = Y(:,:,T)'*Xfin(:,:,T);
+
+  for t=(T-1):-1:1
+    Pt=Pfin(:,:,t) + Xfin(:,:,t)'*Xfin(:,:,t)/N; 
+    Ptsum=Ptsum+Pt;
+    YX=YX+Y(:,:,t)'*Xfin(:,:,t);
   end
+          
+  A3 = Ptsum-Pt;
+  A2 = Ptsum+A2;
+    
+  Pcov=(I-KC)*A*Pcur(:,:,T-1);
+  A1=A1+Pcov+Xfin(:,:,T)'*Xfin(:,:,T-1)/N;
+    
+  for t=(T-1):-1:2      
+    Pcov=(Pcur(:,:,t)+J(:,:,t)*(Pcov-A*Pcur(:,:,t)))*J(:,:,t-1)';
+    A1=A1+Pcov+Xfin(:,:,t)'*Xfin(:,:,t-1)/N;
+  end;    
+    
+  if problem 
+    fprintf('!!!!!!!!! problem  !!!!!!!!!'); problem=0;
+    lik = NaN;
+  end;
+    
+  % optional output arguments
+  varargout(1) = {Ptsum};
+  varargout(2) = {YX};
+  varargout(3) = {A1};
+  varargout(4) = {A2};
+  varargout(5) = {A3};
+end
 
-  J(:,:,t)=Pcur(:,:,t)*A'*inv(Ppre(:,:,t+1));
-  Xfin(:,:,t)=Xcur(:,:,t)+(Xfin(:,:,t+1)-Xcur(:,:,t)*A')*J(:,:,t)';
-  Pfin(:,:,t)=Pcur(:,:,t)+J(:,:,t)*(Pfin(:,:,t+1)-Ppre(:,:,t+1))*J(:,:,t)';
-  Pt=Pfin(:,:,t) + Xfin(:,:,t)'*Xfin(:,:,t)/N; 
-  Ptsum=Ptsum+Pt;
-  YX=YX+Y(:,:,t)'*Xfin(:,:,t);
-end;
 
-A3 = Ptsum-Pt;
-A2 = Ptsum+A2;
-
-t=T;  
-Pcov=(I-KC)*A*Pcur(:,:,t-1);
-A1=A1+Pcov+Xfin(:,:,t)'*Xfin(:,:,t-1)/N;
-
-for t=(T-1):-1:2
-  Pcov=(Pcur(:,:,t)+J(:,:,t)*(Pcov-A*Pcur(:,:,t)))*J(:,:,t-1)';
-  A1=A1+Pcov+Xfin(:,:,t)'*Xfin(:,:,t-1)/N;
-end;    
-
-if problem 
-  fprintf('!!!!!!!!! problem  !!!!!!!!!'); problem=0;
-  lik = NaN;
-end;
-
-% if ( ~all(eig(Ppre(:,:,t+1))>0) | ~all(eig(Pcur(:,:,t))>0)),
-% disp('negative variances !');
-% keyboard;
-% end;
-
-% Hacked by Rich so that the output is the kalman filter
-%Xfin=Xcur;
-%Pfin=Pcur; 
+if verbose==1
+  fprintf('                                        \r')
+end
