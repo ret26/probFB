@@ -37,7 +37,6 @@ if dispFigs==1
   plot(Freqs,specNorm2,'-k')
 end
 
-
 tol = 1e-1;
 assertVectorsAlmostEqual(max(abs(specNorm1-specNorm2')),0,'absolute',tol,0)
 
