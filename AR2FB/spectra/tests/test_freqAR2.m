@@ -2,7 +2,7 @@
 function test_suite = test_freqAR2
   initTestSuite;
 
-  %
+  % tests both freq2AR2 and AR22freq
   
 function test_consistentWith_AR22freq
 
