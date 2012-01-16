@@ -1,16 +1,17 @@
-
 function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
 
-%
-% function  [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalman(A,C,Q,R,x0,P0,Y,verbose,KF);
+% function
+% [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalman(A,C,Q,R,x0,P0,Y,verbose,KF);
 % 
 % Implements Kalman Smoothing or Kalman Filtering. Optionally returns
 % the sufficient statistics of the Gaussian LDS. Based on Zoubin's
-% code. Modified by Richard Turner.
+% code. Modified by Richard Turner. 
 %
 % x_{t}|x_{t-1} ~ Norm(A x_{t-1},Q)
 % y_{t}|x_{t} ~ Norm(C x_{t},R) 
 % x_1 ~ Norm(x0,P0)  
+% 
+% see test_kalman.m for unit tests.
 % 
 % INPUTS:
 % A = Dynamical Matrix, size [K,K]
@@ -40,7 +41,6 @@ function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
 % A2 = \sum_{t=2}^T <x_{k t-1} x_{k' t-1}>, size [K,K]
 % A3 = \sum_{t=2}^T <x_{k t} x_{k' t}>, size [K,K]
 %
-
 
 [N D T]=size(Y);
 K=length(x0);
@@ -83,6 +83,7 @@ if verbose==1
     disp('Kalman Smoothing')
   end
 end
+
 %%%%%%%%%%%%%%%
 % FORWARD PASS
 
@@ -100,7 +101,6 @@ for t=1:T,
     fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
   end
     
-    
   if (K<D)
     temp1= R\C;%  rdiv(C,R);
     temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
@@ -117,11 +117,13 @@ for t=1:T,
 %    CP=C'*invP;
     CP=C'/temp1;
   end;
+
   Kcur=Ppre(:,:,t)*CP;
   KC=Kcur*C;
   Ydiff=Y(:,:,t)-Xpre*C';
   Xcur(:,:,t)=Xpre+Ydiff*Kcur'; 
   Pcur(:,:,t)=Ppre(:,:,t)-KC*Ppre(:,:,t);
+
   if (t<T)
     Xpre=Xcur(:,:,t)*A';
     Ppre(:,:,t+1)=A*Pcur(:,:,t)*A'+Q;
@@ -221,7 +223,6 @@ else
   varargout(4) = {A2};
   varargout(5) = {A3};
 end
-
 
 if verbose==1
   fprintf('                                        \r')
