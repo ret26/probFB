@@ -2,7 +2,8 @@
 function test_suite = test_getSpectraARTau
   initTestSuite;
 
-  % this test is slow and grap
+  % Could do with testing higher order processes here i.e. beyond
+  % second order
   
 function test_compareWithSample
 
