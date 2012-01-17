@@ -2,7 +2,8 @@ function [X,covX] = AR2FB(y,Lam,Var,vary,varargin)
   
   % function [X,covX] = AR2FB(y,Lam,Var,vary)
   %
-  % Second order auto-regressive filter bank
+  % Second order auto-regressive filter bank (see Turner 2010,
+  % Chapter 5 for details)
   %
   % With optional inputs and outputs:
   % function [X,covX] = AR2FB(y,Lam,Var,vary,verbose,KF)
