@@ -5,6 +5,10 @@ function test_suite = test_AR2FB
 %
 % function [X,covX] = AR2FB(y,Lam,Var,vary,verbose,KF)
 %
+% These tests should be tidied up
+%
+% I've left code around to check the sufficient statistics if this
+% is implemented into AR2FB.
 
 function testTwoStepComputeByHand
 
@@ -175,18 +179,14 @@ assertVectorsAlmostEqual(covX1,covX2,'absolute',tol,0)
 % assertVectorsAlmostEqual(A3_1,A3_2,'absolute',tol,0)
 
 
-function testMultiStepRuns
+function testMultiStep
 
 % Test the function returns the true variables when the observation
-% noise is zero and the data are sampled from the model
+% noise is zero and the data are sampled from a single AR(2) process
 
  T = 100;
  D = 1;
  K = 1;
-
- %Lam = [1.5,-0.9;
- %       1.9,-0.95];
- %Var = [1,0.5];
 
  Lam = [1.5,-0.9];
  Var = [1];
@@ -195,23 +195,69 @@ function testMultiStepRuns
  
 x1 = sampleARTau(Lam(1,:),Var(1),T,1);
 Y = x1';
-%x2 = sampleARTau(Lam(2,:),Var(2),T,1);
-%Y = (x1+x2)';
 
 [X,covX] = AR2FB(Y,Lam,Var,vary);
 
-% figure
-% subplot(2,1,1)
-% hold on
-% plot(X(1,:),'-r','linewidth',2)
-% plot(x1,'-b')
-
-% subplot(2,1,2)
-% hold on
-% plot(X(2,:),'-r')
-% plot(x2,'-b')
-
 tol = 1e-3;
 assertVectorsAlmostEqual(x1(:),X(:),'absolute',tol,0)
+
+
+function testMultiStepMultiChain
+
+% Test the function returns the true variables when the observation
+% noise is zero and the data are sampled from the model
+
+dispFigs=0;
+
+ T = 100;
+ D = 1;
+ K = 2;
+
+ Lam = [1.5,-0.9;
+        1.9,-0.95];
+ Var = [1,0.5];
+
+ vary = 1e-6;
+ 
+x1 = sampleARTau(Lam(1,:),Var(1),T,1);
+x2 = sampleARTau(Lam(2,:),Var(2),T,1);
+Y = (x1+x2)';
+
+[X,covX] = AR2FB(Y,Lam,Var,vary);
+
+if dispFigs==1
+
+  sigX1 = sqrt(squeeze(covX(1,1,:)));
+  errorBar1=[X(1,:)- sigX1',X(1,end:-1:1)+sigX1(end:-1:1)'];
+
+  sigX2 = sqrt(squeeze(covX(2,2,:)));
+  errorBar2=[X(2,:)- sigX2',X(2,end:-1:1)+sigX2(end:-1:1)'];
+
+  times = [1:T,T:-1:1];
+  
+  figure
+  subplot(2,1,1)
+  hold on
+
+  patch(times,errorBar1,[1,0.5,0.5],'edgecolor',[1,0.5,0.5])
+  ah1=plot(X(1,:),'-r','linewidth',2);
+  ah2=plot(x1,'-k');
+  legend([ah1,ah2],'estimated','true')
+
+  subplot(2,1,2)
+  hold on
+  patch(times,errorBar2,[1,0.5,0.5],'edgecolor',[1,0.5,0.5])
+  plot(X(2,:),'-r')
+  plot(x2,'-k')
+
+end
+
+
+tol = 1e-3;
+
+assertTrue(var(x1)>var(x1-X(1,:)'), 'estimate error supposed to be less than process variance') 
+
+assertTrue(var(x2)>var(x2-X(2,:)'), 'estimate error supposed to be less than process variance') 
+
 
 
