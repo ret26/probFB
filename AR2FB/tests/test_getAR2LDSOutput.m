@@ -22,7 +22,7 @@ Y = randn(1,1,T);
 [X,covX] = getAR2LDSOutput(Xfin,Pfin);
  
 tol = 1e-5;
-assertVectorsAlmostEqual(X,Xfin(1,[1,3],:),'absolute',tol,0)
+assertVectorsAlmostEqual(X,squeeze(Xfin(1,[1,3],:)),'absolute',tol,0)
 assertVectorsAlmostEqual(covX(1,1,:),Pfin(1,1,:),'absolute',tol,0)
 assertVectorsAlmostEqual(covX(2,2,:),Pfin(3,3,:),'absolute',tol,0)
 assertVectorsAlmostEqual(covX(2,1,:),Pfin(1,3,:),'absolute',tol,0)
