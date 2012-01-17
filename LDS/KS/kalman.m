@@ -1,8 +1,8 @@
 function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
 
 % function
-% [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalman(A,C,Q,R,x0,P0,Y,verbose,KF);
-% 
+% [lik,Xfin,Pfin]=kalman(A,C,Q,R,x0,P0,Y);
+%% 
 % Implements Kalman Smoothing or Kalman Filtering. Optionally returns
 % the sufficient statistics of the Gaussian LDS. Based on Zoubin's
 % code. Modified by Richard Turner. 
@@ -10,7 +10,12 @@ function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
 % x_{t}|x_{t-1} ~ Norm(A x_{t-1},Q)
 % y_{t}|x_{t} ~ Norm(C x_{t},R) 
 % x_1 ~ Norm(x0,P0)  
-% 
+%
+% With optional outputs and inputs:
+%
+% function
+% [lik,Xfin,Pfin,Ptsum,YX,A1,A2,A3]=kalman(A,C,Q,R,x0,P0,Y,verbose,KF);
+%
 % see test_kalman.m for unit tests.
 % 
 % INPUTS:
