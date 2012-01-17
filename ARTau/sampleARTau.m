@@ -1,6 +1,6 @@
-function X = sampleARTau(lams,varx,T,N,Extra)
+function X = sampleARTau(lams,varx,T,N)
   
-  % function x = sampleARTau(lams,varx,T,N,Extra)
+  % function x = sampleARTau(lams,varx,T,N)
   %
   % Draw N realisations from an AR(Tau) process T samples long. The
   % first tau samples are drawn from the stationary distribution of
