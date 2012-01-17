@@ -17,7 +17,7 @@ function [X,covX] = getAR2LDSOutput(Xfin,Pfin);
 
 D =  TwoD/2;
 
-X = squeeze(Xfin(1,[1:2:TwoD],:));
+X = reshape(Xfin(1,[1:2:TwoD],:),[D,T]);
 
 covX = zeros(D,D,T);
 
