@@ -24,10 +24,10 @@ randn('seed',2)
 
  vary = 0;
  
- autoCor1A = getAutoCorARTau(Lam(1,:)',Var(1),2);
- autoCor2A = getAutoCorARTau(Lam(2,:)',Var(2),2);
+autoCor1A = getAutoCorARTau(Lam(1,:)',Var(1),2);
+autoCor2A = getAutoCorARTau(Lam(2,:)',Var(2),2);
  
- [Y,X] = sampleAR2FBSlow(Lam,Var,vary,T);
+[Y,X] = sampleAR2FBSlow(Lam,Var,vary,T);
 
 autoCor1B = [var(X(:,1)); mean(X(2:T,1).*X(1:T-1,1))];
 autoCor2B = [var(X(:,2)); mean(X(2:T,2).*X(1:T-1,2))];
