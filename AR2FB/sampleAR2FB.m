@@ -25,28 +25,41 @@ function [Y,X] = sampleAR2FB(Lam,Var,vary,T);
     
   % Sample from the AR process by filtering coloured noise
   
-  NumFreqs = floor(T/2)+1;
   RngFreqs = [0,1/2];
-  
-  
+    
   for d=1:D
 
+    % Get spectrum centre frequency
     [Freqs,spec,fMAX,SpecMAX,dF1,dF2] = getSpecAR2(Lam(d,:),Var(d), ...
-							NumFreqs,RngFreqs);
+							    1,RngFreqs);
 
-    mVar = getAutoCorARTau(Lam(d,:)',Var(d),1);
-
-    if mod(T,2)==0 
-      % even
-      spec = [spec,spec(end-1:-1:2)]';
-    else 
-      % odd
-      spec = [spec,spec(end:-1:2)]';
-    end
+    tau = 5*ceil(1/fMAX); % if tau=0 the first and last samples
+                          % will be correlated - the fft induces
+                          % circular correlations
+			  
+    Tx = 2^ceil(log2(T+tau)); % make a power of two so fft is fast
     
-    X(:,d) = ifft(sqrt(spec).*fft(randn(T,1)));
+    NumFreqs = Tx/2+1;
+    
+    % Get spectrum centre frequency
+    [Freqs,spec,fMAX,SpecMAX,dF1,dF2] = getSpecAR2(Lam(d,:),Var(d), ...
+							    NumFreqs,RngFreqs);
+    
+    
+    spec = [spec,spec(end-1:-1:2)]';
+    
+    % If you want to handle possibly odd length signals
+    % if mod(T,2)==0 
+    %   % even
+    %   spec = [spec,spec(end-1:-1:2)]';
+    % else 
+    %   % odd
+    %   spec = [spec,spec(end:-1:2)]';
+    % end
+    
+    xCur = ifft(sqrt(spec).*fft(randn(Tx,1)));
+    X(:,d) = xCur(1:T);
   end
       
   % Generate the observations from the xs
   Y = sum(X,2) + randn(T,1)*sqrt(vary);
-  
