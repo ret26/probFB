@@ -4,6 +4,11 @@ function test_suite = test_getSpecAR2
 
   % Could do with testing higher order processes here i.e. beyond
   % second order
+  %
+  % I haven't tested here that the spectrum has the correct scale
+  % (the tests focus on shape). However, the function sampleAR2FB
+  % uses the spectrum to sample from an AR process and the tests
+  % verify that the scale is correct.
   
 function test_compareWithSample
 
