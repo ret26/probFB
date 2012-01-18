@@ -1,9 +1,9 @@
-function [Freqs,Spec,fMAX,SpecMAX,dF1,dF2] = getAR2Spec(lams,varx,NumFreqs,RngFreqs)
+function [Freqs,Spec,fMAX,SpecMAX,dF1,dF2] = getSpecAR2(lams,varx,NumFreqs,RngFreqs)
 
   % function [Freqs,Spec,fMAX,SpecMAX,dF1,dF2] = ...
   %           getAR2Spec(lams,varx,NumFreqs,RngFreqs)
   %
-  % Computes the spectra of a single AR(2) process
+  % Computes the spectra of a single AR(2) process 
   %
   % INPUTS
   % lams = AR(2) dynamical parameter [2,1]
