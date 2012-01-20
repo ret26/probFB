@@ -15,9 +15,12 @@ function freqSq=getVarSpec(X)
 %
 % for tests see test_getVarSpec.m
 
+X = [X;X(end-1:-1:2,:)]; % make this circulant otherwise boundary
+                         % effects can muck things up e.g. with SFA
+
 [T,D] = size(X); 
 
-spec=abs(fft(X)).^2; % spectra
+spec = abs(fft(X)).^2; % spectra
 normSpec = spec.*(ones(T,1)*(1./sum(spec,1))); % normalised to unity
 
 freq = linspace(0,1/2,floor(T/2)+1);
@@ -28,6 +31,7 @@ else
 end
 
 freqSq = sum(normSpec.*(freq.^2*ones(1,D)),1);
+%freqSq = sum(exp(log(normSpec)+log(freq.^2*ones(1,D))),1);
 
 %keyboard
 %freqSq = 2*sum(normSpec(1:floor(T/2)+1,:).*(freq(1:floor(T/2)+1).^2*ones(1,D)),1);

@@ -45,9 +45,12 @@ T = 2000;
 om1 = 2*pi*[1/10,1/5];
 om2 = 2*pi*[1/7,1/3];
 
-X = cos([0:T]'*om1+2*pi*rand)+cos([0:T]'*om2+2*pi*rand);
+alp = 0.3;
 
-freqSq1 = 1/2*(om1/(2*pi)).^2+1/2*(om2/(2*pi)).^2;
+X = alp*cos([0:T]'*om1+2*pi*rand)+(1-alp)*cos([0:T]'*om2+2*pi*rand);
+
+
+freqSq1 = (alp^2*(om1/(2*pi)).^2+(1-alp)^2*(om2/(2*pi)).^2)/(alp^2+(1-alp)^2);
 
 freqSq2=getVarSpec(X);
 
