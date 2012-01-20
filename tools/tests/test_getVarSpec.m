@@ -16,7 +16,7 @@ freqSq1 = (om/(2*pi)).^2;
 
 freqSq2=getVarSpec(X);
 
-[freqSq1;freqSq2]
+%[freqSq1;freqSq2]
 
 tol = 1e-3;
 assertVectorsAlmostEqual(freqSq1,freqSq2,'absolute',tol,0)
@@ -32,7 +32,26 @@ freqSq1 = mean(linspace(-1/2,1/2,T)'.^2);
 
 freqSq2=getVarSpec(X);
 
-[freqSq1,freqSq2]
+%[freqSq1,freqSq2]
 
 tol = 1e-1;
+assertVectorsAlmostEqual(freqSq1,freqSq2,'absolute',tol,0)
+
+
+function test_multiSinusoids
+
+T = 2000;
+
+om1 = 2*pi*[1/10,1/5];
+om2 = 2*pi*[1/7,1/3];
+
+X = cos([0:T]'*om1+2*pi*rand)+cos([0:T]'*om2+2*pi*rand);
+
+freqSq1 = 1/2*(om1/(2*pi)).^2+1/2*(om2/(2*pi)).^2;
+
+freqSq2=getVarSpec(X);
+
+%[freqSq1;freqSq2]
+
+tol = 1e-3;
 assertVectorsAlmostEqual(freqSq1,freqSq2,'absolute',tol,0)
