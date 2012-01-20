@@ -28,3 +28,5 @@ else
 end
 
 freqSq = sum(normSpec.*(freq.^2*ones(1,D)),1);
+
+%freqSq = 2*sum(normSpec(1:floor(T/2)+1,:).*(freq(1:floor(T/2)+1).^2*ones(1,D)),1);

@@ -8,13 +8,15 @@ function test_sinusoid
 
 T = 100;
 
-om = 2*pi*[1/5,1/10];
+om = 2*pi*[1/10,1/50];
 
-X = cos([0:T]'*om);
+X = cos([0:T]'*om+2*pi*rand);
 
 freqSq1 = (om/(2*pi)).^2;
 
 freqSq2=getVarSpec(X);
+
+[freqSq1;freqSq2]
 
 tol = 1e-3;
 assertVectorsAlmostEqual(freqSq1,freqSq2,'absolute',tol,0)
@@ -34,5 +36,3 @@ freqSq2=getVarSpec(X);
 
 tol = 1e-1;
 assertVectorsAlmostEqual(freqSq1,freqSq2,'absolute',tol,0)
-
-
