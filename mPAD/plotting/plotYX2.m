@@ -1,6 +1,6 @@
-function figH=plotYX2(y,X2,tit,FSamp)
+function figH = plotYX2(y,X2,tit,FSamp)
 
-% function figH=plotYX2(y,X2,tit,FSamp)
+% function figH = plotYX2(y,X2,tit,FSamp)
 %
 % Plots a waveform and the extracted X2 values
 %
