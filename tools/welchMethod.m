@@ -21,7 +21,7 @@ function [pg,varpg] = welchMethod(y,numFreq,ovLp)
 % INPUTS
 % y = signal, size [T,1]
 % numFreq = number of frequencies at which to compute the pg
-% ovLp = overlap of each chunk
+% ovLp = overlap of each chunk (ovLp<numFreq)
 %
 % OUTPUTS
 % pg = (mean) periodogram, size [numFreq,1]
@@ -29,6 +29,13 @@ function [pg,varpg] = welchMethod(y,numFreq,ovLp)
 %
 % See the wikipedia entry for details of the method:
 % http://en.wikipedia.org/wiki/Welch_method
+
+if ovLp>numFreq
+  disp('Error in welchMethod.m line 34: overlap > numFreq');
+  pg = NaN;
+  varpg = NaN;
+  return;
+end
 
 T = length(y);
 Tc = numFreq;
