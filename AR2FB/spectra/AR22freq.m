@@ -7,7 +7,7 @@ function [CF,dF, mVar] = AR22freq(Lam,Var);
   % (dF) 
   %
   % INPUTS
-  % Lam = dynamical parameters, size [D,2] (N = number of AR2 processes)
+  % Lam = dynamical parameters, size [D,2] (D = number of AR2 processes)
   % Var = innovations variance, size [D,1]
   %
   % OUTPUTS
