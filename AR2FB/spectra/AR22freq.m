@@ -31,4 +31,5 @@ function [CF,dF, mVar] = AR22freq(Lam,Var);
   cosOmMinus = cosOm - dcosOm;
   dF = FSamp*abs(acos(cosOmPlus)-acos(cosOmMinus))/(2*pi);
   
-  mVar = (1-lam2).*Var./(1-lam1.^2-lam2.^2-lam2-lam1.^2.*lam2+lam2.^3);
+  mVar = getmVarAR2(Lam,Var);
+%  mVar = (1-lam2).*Var./(1-lam1.^2-lam2.^2-lam2-lam1.^2.*lam2+lam2.^3);
