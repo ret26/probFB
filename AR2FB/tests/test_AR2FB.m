@@ -261,3 +261,43 @@ assertTrue(var(x2)>var(x2-X(2,:)'), 'estimate error supposed to be less than pro
 
 
 
+function testFFTagreesWithKalman
+
+% Test the FFT based and Kalman based solutions agree - except at
+% the edges
+
+randn('state',1);
+
+dispFigs=0;
+
+ T = 200;
+ D = 1;
+ K = 2;
+
+ Lam = [1.5,-0.9;
+        1.9,-0.95];
+ Var = [1,0.5];
+
+ vary = 1e-1;
+ 
+x1 = sampleARTau(Lam(1,:),Var(1),T,1);
+x2 = sampleARTau(Lam(2,:),Var(2),T,1);
+Y = (x1+x2)';
+
+[X1,covX] = AR2FB(Y,Lam,Var,vary);
+X2 = AR2FB(Y,Lam,Var,vary);
+
+if dispFigs==1
+  figure
+  hold on
+  plot(X1','-k','linewidth',2)
+  plot(X2','-r')
+  error=mean((X1(:)-X2(:)).^2)
+end
+
+
+
+tol = 1e-2;
+tEdge = 40;
+assertVectorsAlmostEqual(X1(:,tEdge:T-tEdge),X2(:,tEdge:T-tEdge),'absolute',tol,0)
+

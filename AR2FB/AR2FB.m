@@ -1,12 +1,26 @@
-function [X,covX] = AR2FB(y,Lam,Var,vary,varargin)
+function [X,varargout] = AR2FB(y,Lam,Var,vary,varargin)
   
-  % function [X,covX] = AR2FB(y,Lam,Var,vary)
+  % function X = AR2FB(y,Lam,Var,vary)
   %
   % Second order auto-regressive filter bank (see Turner 2010,
   % Chapter 5 for details)
   %
+  % In the standard mode above the FFT is used to compute the AR
+  % filter bank. This is fast.
+  % 
+  % NOTE: THAT THE FFT METHOD GIVES A SLIGHTLY DIFFERENT SOLUTION
+  % FROM THE KALMAN BASED METHODS (SEE BELOW). SPECIFICALLY, AT THE
+  % START AND END OF THE SIGNAL THERE ARE DISCREPANCIES DUE TO THE
+  % CIRCULAR BOUNDARY CONDITIONS ASSUMED.
+  %
   % With optional inputs and outputs:
   % function [X,covX] = AR2FB(y,Lam,Var,vary,verbose,KF)
+  %
+  % In this mode (or when the noise is non-stationary), the Kalman
+  % smoother/filter is used to compute the AR filter bank. This is
+  % rather slower, but it can handle non-stationary noise and it
+  % returns the uncertainty values. 
+  %
   %
   % INPUTS
   % y = data [T,1]
@@ -19,6 +33,7 @@ function [X,covX] = AR2FB(y,Lam,Var,vary,varargin)
   %  
   % OUTPUTS
   % X = AR2 process mean values, size [D,T]
+  % OPTIONAL OUTPUTS:
   % covX = Covariances of these values, [D,D,T]
   %
   % I could modify this to return the sufficient statistics and
@@ -38,12 +53,23 @@ else
   KF = varargin{2};
 end
 
-% Get parameters for smoothing
-[A,Q,C,R,x0,P0] =  ar2LDSParams(Lam,Var,vary);
+if KF==0 & nargout==1 & length(vary)==1
+
+  X = AR2FBFFT(y,Lam,Var,vary);
   
-% Kalman Smoothing
-[lik,Xfin,Pfin] = kalman(A,C,Q,R,x0,P0,reshape(y,[1,1,T]),verbose,KF);
+else
+  % Get parameters for smoothing
+  [A,Q,C,R,x0,P0] =  ar2LDSParams(Lam,Var,vary);
+  
+  % Kalman Smoothing
+  [lik,Xfin,Pfin] = kalman(A,C,Q,R,x0,P0,reshape(y,[1,1,T]),verbose,KF);
 
-% Output
-[X,covX] = getAR2LDSOutput(Xfin,Pfin);
+  % Output
+  [X,covX] = getAR2LDSOutput(Xfin,Pfin);
+end
 
+if nargout==2
+  varargout(1) = {covX};
+else
+  varargout(1) = {[]};
+end
