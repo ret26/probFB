@@ -10,7 +10,7 @@ function testCompareSTFT_And_FB
 
 % Two time-step example which can be computed by hand
 
-T = 3;
+T = 30;
 D = 2;
 
 lamx = [.9;.7];
@@ -43,3 +43,48 @@ end
 tol = 1e-5;
 assertVectorsAlmostEqual(Z1,Z2,'absolute',tol,0)
 assertVectorsAlmostEqual(covZ1,covZ2,'absolute',tol,0)
+
+
+function testCompareSTFT_And_FB_FFT
+
+% Two time-step example which can be computed by hand
+
+T = 30;
+D = 2;
+
+lamx = [.9;.7];
+varx = rand(length(lamx),1);
+om = [1/10,1/20]';
+vary = rand;
+y = randn(T,1);
+
+Z1 = probFB(y,lamx,varx,om,vary);
+S = probSTFT(y,lamx,varx,om,vary);
+
+Z2(1,:) = S(1,:).*exp(i*om(1)*[1:T]);
+Z2(2,:) = S(2,:).*exp(i*om(2)*[1:T]);
+
+tol = 1e-5;
+assertVectorsAlmostEqual(Z1,Z2,'absolute',tol,0)
+
+
+function testCompareSTFT_And_STFT_FFT
+
+% Two time-step example which can be computed by hand
+
+T = 200;
+D = 2;
+
+lamx = [.9;.7];
+varx = rand(length(lamx),1);
+om = [1/10,1/20]';
+vary = rand;
+y = randn(T,1);
+
+S1 = probSTFT(y,lamx,varx,om,vary);
+[S2,temp] = probSTFT(y,lamx,varx,om,vary);
+
+tEdge = 60;
+tol = 1e-3;
+assertVectorsAlmostEqual(S1(:,tEdge:T-tEdge),S2(:,tEdge:T-tEdge),'absolute',tol,0)
+
