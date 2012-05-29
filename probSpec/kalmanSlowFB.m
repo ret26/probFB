@@ -24,7 +24,7 @@ function  [lik,Xfin,Pfin,varargout] = kalmanSlowFB(lamx,varx,om, ...
 % lamx = dynamical AR parameters [D,1]
 % varx = dynamical noise parameters [D,1]
 % om = mean frequencies of the sinusoids [D,1]
-% vary = oberservation noise
+% vary = observation noise (either scalar or vector [T,1])
 % y = Data, size [T,1] 
 %
 % OPTIONAL INPUTS:
@@ -65,7 +65,7 @@ temp2 = [varx';
 
 Q = diag(temp2(:));
 
-R = vary;
+T_R = length(vary);
 
 x0 = zeros(2*K,1);
 
@@ -125,7 +125,6 @@ end
 % FORWARD PASS
 
 %R=R+(R==0)*tiny;
-invR=inv(R);
 
 Xpre=ones(N,1)*x0';
 Ppre(:,:,1)=P0;
@@ -133,6 +132,14 @@ Ppre(:,:,1)=P0;
 CntInt=T/5; % T / 2*number of progress values displayed
 
 for t=1:T,
+  
+  if T_R>1
+    R = vary(t);
+    invR = inv(R);
+  else
+    R = vary;
+    invR = inv(R);
+  end
   
   if verbose==1&mod(t-1,CntInt)==0
     fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
