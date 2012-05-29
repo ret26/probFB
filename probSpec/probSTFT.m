@@ -1,8 +1,16 @@
-function [S,covS] = probSTFT(y,lamx,varx,om,vary,varargin)
+function [S,varargout] = probSTFT(y,lamx,varx,om,vary,varargin)
   
-  % function [S,covS] = probSTFT(y,lamx,varx,om,vary,varargin)
+  % function S = probSTFT(y,lamx,varx,om,vary,varargin)
   %
   % Probabilistic STFT (see Turner 2010, Chapter 5 for details)
+  %
+  % In the standard mode above the FFT is used to compute the AR
+  % filter bank. This is fast.
+  % 
+  % NOTE: THAT THE FFT METHOD GIVES A SLIGHTLY DIFFERENT SOLUTION
+  % FROM THE KALMAN BASED METHODS (SEE BELOW). SPECIFICALLY, AT THE
+  % START AND END OF THE SIGNAL THERE ARE DISCREPANCIES DUE TO THE
+  % CIRCULAR BOUNDARY CONDITIONS ASSUMED.
   %
   % With optional inputs and outputs:
   % function [S,covS] = probSTFT(y,lamx,varx,om,vary,verbose,KF)
@@ -20,6 +28,7 @@ function [S,covS] = probSTFT(y,lamx,varx,om,vary,varargin)
   %  
   % OUTPUTS
   % S = probabilistic STFT process mean values (these are complex), size [D,T]
+  % OPTIONAL OUTPUTS:
   % covS = Covariances of these values, [2D,2D,T]
   %
   % I could modify this to return the sufficient statistics and
@@ -38,10 +47,20 @@ if nargin<=6
 else
   KF = varargin{2};
 end
-  
-% Kalman Smoothing
-[lik,Xfin,Pfin] = kalmanSlowSTFT(lamx,varx,om, vary,y,verbose,KF);
 
-% Output
-[S,covS] = getSTFTLDSOutput(Xfin,Pfin);
+if KF==0 & nargout==1 & length(vary)==1
 
+  S = probSTFT_FFT(y,lamx,varx,om,vary);
+else
+  % Kalman Smoothing
+  [lik,Xfin,Pfin] = kalmanSlowSTFT(lamx,varx,om, vary,y,verbose,KF);
+
+  % Output
+  [S,covS] = getSTFTLDSOutput(Xfin,Pfin);
+end
+
+if nargout==2
+  varargout(1) = {covS};
+else
+  varargout(1) = {[]};
+end
