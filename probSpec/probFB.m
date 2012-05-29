@@ -1,8 +1,16 @@
-function [Z,covZ] = probFB(y,lamx,varx,om,vary,varargin)
+function [Z,varargout] = probFB(y,lamx,varx,om,vary,varargin)
   
-  % function [Z,covZ] = probFB(y,lamx,varx,om,vary,varargin)
+  % function Z = probFB(y,lamx,varx,om,vary,varargin)
   %
   % Probabilistic Filter Bank (see Turner 2010, Chapter 5 for details)
+  %
+  % In the standard mode above the FFT is used to compute the AR
+  % filter bank. This is fast.
+  % 
+  % NOTE: THAT THE FFT METHOD GIVES A SLIGHTLY DIFFERENT SOLUTION
+  % FROM THE KALMAN BASED METHODS (SEE BELOW). SPECIFICALLY, AT THE
+  % START AND END OF THE SIGNAL THERE ARE DISCREPANCIES DUE TO THE
+  % CIRCULAR BOUNDARY CONDITIONS ASSUMED.
   %
   % With optional inputs and outputs:
   % function [Z,covZ] = probSTFT(y,lamx,varx,om,vary,verbose,KF)
@@ -21,6 +29,7 @@ function [Z,covZ] = probFB(y,lamx,varx,om,vary,varargin)
   % OUTPUTS
   % Z = probabilistic filter bank process mean values (these are
   %     complex), size [D,T]
+  % OPTIONAL OUTPUTS:
   % covZ = Covariances of these values, [2D,2D,T]
   %
   % I could modify this to return the sufficient statistics and
@@ -39,10 +48,23 @@ if nargin<=6
 else
   KF = varargin{2};
 end
+
+if KF==0 & nargout==1 & length(vary)==1
+
+  Z = probFB_FFT(y,lamx,varx,om,vary);
+   
+else
   
-% Kalman Smoothing
-[lik,Xfin,Pfin] = kalmanSlowFB(lamx,varx,om, vary,y,verbose,KF);
+  % Kalman Smoothing
+  [lik,Xfin,Pfin] = kalmanSlowFB(lamx,varx,om, vary,y,verbose,KF);
 
-% Output
-[Z,covZ] = getFBLDSOutput(Xfin,Pfin);
+  % Output
+  [Z,covZ] = getFBLDSOutput(Xfin,Pfin);
 
+end
+
+if nargout==2
+  varargout(1) = {covZ};
+else
+  varargout(1) = {[]};
+end
