@@ -38,7 +38,7 @@ function test_2DExample
 Lam = [1.5,-0.7;
        1,-0.8];
 Var = [1,1];
-vary = 0.03;
+vary = randn(5,1);
 
 [A,Q,C,R,x0,P0] =  ar2LDSParams(Lam,Var,vary);
 
@@ -52,7 +52,7 @@ Q2 = [Var(1),0,0,0;
       0,0,Var(2),0;
       0,0,0,0];
 C2 = [1,0,1,0];
-R2 = vary;
+R2 = reshape(vary,[1,1,5]);
 x02 = [0;0;0;0];
 
 autoCor1 = getAutoCorARTau(Lam(1,:)',1,2);

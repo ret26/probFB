@@ -15,7 +15,7 @@ function [A,Q,C,R,x0,P0] =  ar2LDSParams(Lam,Var,vary);
 % A = dynamics matrix, size [2*D,2*D]
 % Q = dynamics noise, size [2*D,2*D]
 % C = emission matrix, size [1,2*D]
-% R = emission noise, scalar
+% R = emission noise
 % 
 % see kalman.m for what these new outputs are used for
 % see test_ar2LDSParams.m for tests
@@ -25,7 +25,13 @@ function [A,Q,C,R,x0,P0] =  ar2LDSParams(Lam,Var,vary);
   A = zeros(2*D);
   Q = zeros(2*D);
   C = repmat([1,0],[1,D]);
-  R = vary;
+
+  if length(vary)==1
+    R = vary;
+  else
+    R = reshape(vary,[1,1,length(vary)]);
+  end
+  
   x0 = zeros(2*D,1);
   
   for d=1:D    
