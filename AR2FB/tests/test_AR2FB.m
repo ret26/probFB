@@ -301,3 +301,76 @@ tol = 1e-2;
 tEdge = 40;
 assertVectorsAlmostEqual(X1(:,tEdge:T-tEdge),X2(:,tEdge:T-tEdge),'absolute',tol,0)
 
+
+
+function testTwoStepComputeByHandNonStationaryNoise
+
+% Two time-step example which can be computed by hand that includes
+% non-stationary observation noise
+
+dispFig = 0;
+
+T = 2;
+D = 1;
+K = 2;
+
+lam = 0.9;
+Lam = [lam,0];
+Var = 1.4;
+vary = [0.02;0.04];
+
+autoCor = Var/(1-lam^2)*[1,lam];
+tiny = 1e-10;
+
+
+x0 = zeros(K,1);
+P0 = [autoCor(1),autoCor(2);autoCor(2),autoCor(1)];
+A = [lam,0;
+     1,0];
+C = [1,0];
+Q = [Var,0;
+     0,tiny];
+
+R = vary; 
+Y = randn([1,D,T]);
+
+Y0 = squeeze(Y(1,:,1))';
+Y1 = squeeze(Y(1,:,2))';
+
+pre = [inv(P0)+A'*inv(Q)*A+C'*inv(R(1))*C,-A'*inv(Q);
+       -inv(Q)*A,inv(Q)+C'*inv(R(2))*C];
+
+muPre = [x0'*inv(P0)+Y0'*inv(R(1))*C,Y1'*inv(R(2))*C]';
+
+sigmaPost = inv(pre);
+muPost = sigmaPost*muPre;
+
+Xfin1 = reshape(muPost,[1,K,T]);
+
+Pfin1 = zeros(K,K,T);
+Pfin1(:,:,1) = sigmaPost(1:K,1:K);
+Pfin1(:,:,2) = sigmaPost(K+1:2*K,K+1:2*K);
+
+% lik1 = -1/2*log(det(2*pi*P0))-1/2*log(det(2*pi*Q)) ...
+%        -log(det(2*pi*R))+1/2*log(det(2*pi*sigmaPost)) ...
+%        -1/2*Y0'*inv(R)*Y0-1/2*Y1'*inv(R)*Y1 ...
+%        -1/2*x0'*inv(P0)*x0 + 1/2*muPost'*inv(sigmaPost)*muPost;
+
+% Ptsum_1 = Pfin1(:,:,1)+Pfin1(:,:,2)+...
+% 	  Xfin1(1,:,1)'*Xfin1(1,:,1)+Xfin1(1,:,2)'*Xfin1(1,:,2);
+
+% YX_1 = Y(1,:,1)'*Xfin1(1,:,1)+Y(1,:,2)'*Xfin1(1,:,2);
+
+% A1_1 = Xfin1(1,:,2)'*Xfin1(1,:,1)+sigmaPost(K+1:2*K,1:K);
+% A2_1 = Pfin1(:,:,1)+ Xfin1(1,:,1)'*Xfin1(1,:,1);
+% A3_1 = Pfin1(:,:,2)+ Xfin1(1,:,2)'*Xfin1(1,:,2);
+
+X1 = reshape(Xfin1(1,1,:),[1,T]);
+covX1 = reshape(Pfin1(1,1,:),[1,1,T]);
+
+[X2,covX2] = AR2FB(Y(:),Lam,Var,vary);
+
+tol = 1e-5;
+
+assertVectorsAlmostEqual(X1,X2,'absolute',tol,0)
+assertVectorsAlmostEqual(covX1,covX2,'absolute',tol,0)
