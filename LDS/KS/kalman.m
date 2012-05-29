@@ -22,7 +22,7 @@ function  [lik,Xfin,Pfin,varargout] = kalman(A,C,Q,R,x0,P0,Y,varargin);
 % A = Dynamical Matrix, size [K,K]
 % C = Emission Matrices, size  [D,K]
 % Q = State innovations noise, size [K,K]
-% R = Emission Noise, size [D,D]  
+% R = Emission Noise, size [D,D] (or [D,D,T] for non-stationary noise) 
 % x0 = initial state mean, size [K,1]
 % P0 = initial state covariance, size [K,K]  
 % Y = Data, size [N,D,T] 
@@ -93,22 +93,34 @@ end
 % FORWARD PASS
 
 %R=R+(R==0)*tiny;
-invR=inv(R);
+%invR=inv(R);
 
 Xpre=ones(N,1)*x0';
 Ppre(:,:,1)=P0;
 
 CntInt=T/5; % T / 2*number of progress values displayed
 
+T_R = size(R,3);
+
 for t=1:T,
 
+  if T_R>1
+    Rcur = R(:,:,t);
+    invR = inv(Rcur);
+  else
+    Rcur = R;
+    invR = inv(Rcur);
+  end
+  
+
+  
   if verbose==1&mod(t-1,CntInt)==0
     fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
   end
     
   if (K<D)
-    temp1= R\C;%  rdiv(C,R);
-    temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
+    temp1= Rcur\C;%  rdiv(C,Rcur);
+    temp2=temp1*Ppre(:,:,t); % inv(Rcur)*C*Ppre
     temp3=C'*temp2;
    % temp4=inv(I+temp3)*temp1';
     temp4=(I+temp3)\temp1';
@@ -116,8 +128,8 @@ for t=1:T,
     invP=invR-temp2*temp4; 
     CP= temp1' - temp3*temp4;    % C'*invP
   else
-%    temp1=diag(R)+C*Ppre(:,:,t)*C';
-    temp1=R+C*Ppre(:,:,t)*C';
+%    temp1=diag(Rcur)+C*Ppre(:,:,t)*C';
+    temp1=Rcur+C*Ppre(:,:,t)*C';
     invP=inv(temp1);
 %    CP=C'*invP;
     CP=C'/temp1;
