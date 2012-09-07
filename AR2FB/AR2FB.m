@@ -6,12 +6,14 @@ function [X,varargout] = AR2FB(y,Lam,Var,vary,varargin)
   % Chapter 5 for details)
   %
   % In the standard mode above the FFT is used to compute the AR
-  % filter bank. This is fast.
+  % filter bank. This is fast. When the optional inputs/output below
+  % are added/requested, the kalman mode is used which is slower.
   % 
   % NOTE: THAT THE FFT METHOD GIVES A SLIGHTLY DIFFERENT SOLUTION
   % FROM THE KALMAN BASED METHODS (SEE BELOW). SPECIFICALLY, AT THE
   % START AND END OF THE SIGNAL THERE ARE DISCREPANCIES DUE TO THE
-  % CIRCULAR BOUNDARY CONDITIONS ASSUMED.
+  % CIRCULAR BOUNDARY CONDITIONS ASSUMED. IN GENERAL THOUGH, THE
+  % TWO METHODS WILL BE EXTREMELY SIMILAR.
   %
   % With optional inputs and outputs:
   % function [X,covX] = AR2FB(y,Lam,Var,vary,verbose,KF)
