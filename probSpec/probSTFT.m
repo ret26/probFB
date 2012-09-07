@@ -5,12 +5,14 @@ function [S,varargout] = probSTFT(y,lamx,varx,om,vary,varargin)
   % Probabilistic STFT (see Turner 2010, Chapter 5 for details)
   %
   % In the standard mode above the FFT is used to compute the AR
-  % filter bank. This is fast.
+  % filter bank. This is fast. When the optional inputs/output below
+  % are added/requested, the kalman mode is used which is slower.
   % 
   % NOTE: THAT THE FFT METHOD GIVES A SLIGHTLY DIFFERENT SOLUTION
   % FROM THE KALMAN BASED METHODS (SEE BELOW). SPECIFICALLY, AT THE
   % START AND END OF THE SIGNAL THERE ARE DISCREPANCIES DUE TO THE
-  % CIRCULAR BOUNDARY CONDITIONS ASSUMED.
+  % CIRCULAR BOUNDARY CONDITIONS ASSUMED. IN GENERAL THOUGH, THE
+  % TWO METHODS WILL BE EXTREMELY SIMILAR.
   %
   % With optional inputs and outputs:
   % function [S,covS] = probSTFT(y,lamx,varx,om,vary,verbose,KF)
@@ -53,7 +55,7 @@ if KF==0 & nargout==1 & length(vary)==1
   S = probSTFT_FFT(y,lamx,varx,om,vary);
 else
   % Kalman Smoothing
-  [lik,Xfin,Pfin] = kalmanSlowSTFT(lamx,varx,om, vary,y,verbose,KF);
+  [lik,Xfin,Pfin] = kalmanSlowSTFT(lamx,varx,om,vary,y,verbose,KF);
 
   % Output
   [S,covS] = getSTFTLDSOutput(Xfin,Pfin);
