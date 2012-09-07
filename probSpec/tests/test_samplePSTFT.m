@@ -102,6 +102,105 @@ assertVectorsAlmostEqual(autoCor2A,autoCor2C,'absolute',tol,0)
 tol =1e-5;
 assertVectorsAlmostEqual(sum(real(Zb.*exp(i*[1:T]'*Om')),2),Yb,'absolute',tol,0)
 
+function testRealMatchAR2CloseOm
+
+% Tests the auto correlation of the real/imaginary parts of the samples matches
+% those computed using the AR method. Testing where the frequencies
+% are low, where the spectra from the negative/positive regions overlap
+
+dispFigs=1;
+
+randn('seed',2)
+
+ T = 100000;
+ D = 2;
+ K = 2;
+ Lam1  = [0.9,0.8];
+ Var1  = (1-Lam1.^2);
+ Om = [pi/100,pi/50]';
+ 
+ Lam2 = [2*Lam1'.*cos(Om),-Lam1'.^2];
+ Var2 = (1+Lam1.^2).*Var1;
+
+ vary = 0;
+ 
+[Ya,Za] = samplePSTFTslow(Lam1,Var1,Om,vary,T);
+
+X1 = real(Za);
+tau = 50;
+
+autoCor1A = zeros(tau,1);
+autoCor2A = zeros(tau,1);
+
+for t=1:tau
+  autoCor1A(t) = mean(X1(t:T,1).*X1(1:T-t+1,1));
+  autoCor2A(t) = mean(X1(t:T,2).*X1(1:T-t+1,2));
+end
+
+X2 = imag(Za);
+
+autoCor1B = zeros(tau,1);
+autoCor2B = zeros(tau,1);
+
+for t=1:tau
+  autoCor1B(t) = mean(X2(t:T,1).*X2(1:T-t+1,1));
+  autoCor2B(t) = mean(X2(t:T,2).*X2(1:T-t+1,2));
+end
+
+%%%%%%
+
+[Yb,Zb] = samplePSTFT(Lam1,Var1,Om,vary,T);
+
+X1 = real(Zb);
+
+autoCor1C = zeros(tau,1);
+autoCor2C = zeros(tau,1);
+
+for t=1:tau
+  autoCor1C(t) = mean(X1(t:T,1).*X1(1:T-t+1,1));
+  autoCor2C(t) = mean(X1(t:T,2).*X1(1:T-t+1,2));
+end
+
+
+X2 = imag(Zb);
+
+autoCor1D = zeros(tau,1);
+autoCor2D = zeros(tau,1);
+
+for t=1:tau
+  autoCor1D(t) = mean(X2(t:T,1).*X2(1:T-t+1,1));
+  autoCor2D(t) = mean(X2(t:T,2).*X2(1:T-t+1,2));
+end
+
+
+if dispFigs==1
+  figure
+  subplot(2,1,1)
+  hold on
+  plot(autoCor1A,'-k','linewidth',2)
+  plot(autoCor1B,'-r')
+  plot(autoCor1C,'-c','linewidth',1/2)
+  plot(autoCor1D,'-y','linewidth',1/2)
+ 
+  subplot(2,1,2)
+  hold on
+  plot(autoCor2A,'-k','linewidth',2)
+  plot(autoCor2B,'-r')
+  plot(autoCor2C,'-c','linewidth',1/2)
+  plot(autoCor2D,'-y','linewidth',1/2)
+
+end
+
+tol =3e-1;
+assertVectorsAlmostEqual(autoCor1A,autoCor1B,'absolute',tol,0)
+assertVectorsAlmostEqual(autoCor1A,autoCor1C,'absolute',tol,0)
+assertVectorsAlmostEqual(autoCor2A,autoCor2B,'absolute',tol,0)
+assertVectorsAlmostEqual(autoCor2A,autoCor2C,'absolute',tol,0)
+
+tol =1e-5;
+assertVectorsAlmostEqual(sum(real(Zb.*exp(i*[1:T]'*Om')),2),Yb,'absolute',tol,0)
+
+
 
 % function testFirstAndLastSamplesIndependent
 

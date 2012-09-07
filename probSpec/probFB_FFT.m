@@ -19,13 +19,12 @@ function X = probFB_FFT(y,lamx,varx,om,vary)
   % X = probabilistic filter bank process mean values (these are
   %     complex), size [D,T]
   %
-
+  %
+  %
+  
 T = length(y);  
 RngFreqs = [0,1/2];
 D = length(varx);
-
-[Lam,Var] = probSpec2AR2(om,lamx,varx);
-
 
 % DETERMINE PADDING BASED ON LONGEST TIME-CONSTANTS OF Xs
 tol = 3;
@@ -45,8 +44,9 @@ for d=1:D
   [Freqs2,spec2] = getCompSpecPFB(lamx(d),varx(d),-om(d),Tx/2-1,[-1/2+ ...
 		    delta,-delta]);  
 
+  % This is round the houses but it wraps the spectrum correctly
   specX(:,d) = [spec1,spec2]';
-%keyboard
+
   specY = specY+(specX(:,d)+specX([1,[Tx:-1:Tx/2+1],[Tx/2:-1:2]],d))/2;
   %specY = specY+[spec1,spec1(end-1:-1:2)]'/2;
   
