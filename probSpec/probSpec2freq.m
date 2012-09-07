@@ -14,5 +14,10 @@ function [fmax,df,varMa] = probSpec2freq(om,lamx,varx)
 % df = bandwidths, size [D,1]
 % varMa = marginal variances, size [D,1]
 
-[Lam,Var] = probSpec2AR2(om,lamx,varx);
-[fmax,df, varMa] = AR22freq(Lam,Var);
+fmax = om/(2*pi);
+df = acos((lamx.^2-1)./(2*lamx)+2)/(2*pi);
+varMa = varx./(1-lamx.^2);
+
+
+%[Lam,Var] = probSpec2AR2(om,lamx,varx);
+%[fmax,df, varMa] = AR22freq(Lam,Var);

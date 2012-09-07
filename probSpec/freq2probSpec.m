@@ -16,5 +16,10 @@ function [om,lamx,varx] = freq2probSpec(fmax,df,varMa)
 % varx = dynamical noise parameters [D,1]
 % om = mean frequencies of the sinusoids [D,1]
 
-[Lam,Var] = freq2AR2(fmax,df,varMa);
-[om,lamx,varx] = AR22probSpec(Lam,Var);
+om = 2*pi*fmax;
+%lamx = cos(2*pi*df)-sqrt(cos(2*pi*df).^2+1);
+lamx = cos(2*pi*df)-2+sqrt((2-cos(2*pi*df)).^2+1);
+varx = varMa.*(1-lamx.^2);
+
+%[Lam,Var] = freq2AR2(fmax,df,varMa);
+%[om,lamx,varx] = AR22probSpec(Lam,Var);
