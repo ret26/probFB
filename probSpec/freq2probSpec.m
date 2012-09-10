@@ -18,7 +18,8 @@ function [om,lamx,varx] = freq2probSpec(fmax,df,varMa)
 
 om = 2*pi*fmax;
 %lamx = cos(2*pi*df)-sqrt(cos(2*pi*df).^2+1);
-lamx = cos(2*pi*df)-2+sqrt((2-cos(2*pi*df)).^2+1);
+
+lamx = 2-cos(2*pi*df)-sqrt(cos(2*pi*df).^2-4*cos(2*pi*df)+3);
 varx = varMa.*(1-lamx.^2);
 
 %[Lam,Var] = freq2AR2(fmax,df,varMa);

@@ -15,7 +15,7 @@ function [fmax,df,varMa] = probSpec2freq(om,lamx,varx)
 % varMa = marginal variances, size [D,1]
 
 fmax = om/(2*pi);
-df = acos((lamx.^2-1)./(2*lamx)+2)/(2*pi);
+df = acos(2-(lamx.^2+1)./(2*lamx))/(2*pi);
 varMa = varx./(1-lamx.^2);
 
 
