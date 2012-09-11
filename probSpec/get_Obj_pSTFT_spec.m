@@ -22,11 +22,11 @@ function [Obj,varargout] = get_Obj_pSTFT_spec(theta,vary,specTar,minVar,limOm,li
 % Which can be derived from the fact that the model is a Gaussian
 % with a spectrum parameterised using the AR(1)/cosine parameters.
 %
-% The function uses function parameterises the AR processes using the
-% marginal variance of the processes rather than the conditional
-% (marginal variance = conditional variance/(1-lam^2)) since the
-% objective is more simply behaved in this space and the constraints
-% on the parameters are simpler to enforce.
+% The function parameterises the AR processes using the marginal
+% variance of the processes rather than the conditional (marginal
+% variance = conditional variance/(1-lam^2)) since the objective is
+% more simply behaved in this space and the constraints on the
+% parameters are simpler to enforce.
 %
 % INPUTS
 % theta = parameters of the probabilistic spectrogram to be optimised:
