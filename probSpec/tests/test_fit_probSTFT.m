@@ -118,6 +118,7 @@ freqs = linspace(0,1/2,T);
 
 specEst = get_pSTFT_spec(freqs,lamxEst,varxEst,omEst);
 
+
 cumsumSig = 2*cumsum(specSig(1:floor(T/2))/T);
 cumsumEst = cumsum(sum(specEst,1));
 
