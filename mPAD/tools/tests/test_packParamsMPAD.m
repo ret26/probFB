@@ -4,7 +4,7 @@ function test_suite =  test_packParamsMPAD
 % test 
 % 
 
-function test_correctAutoCorrelationGPs
+function test_correctValues_AR2
 
 G = rand;
 Lam1 = rand;
@@ -28,3 +28,32 @@ assertVectorsAlmostEqual(Len2,Len22,'absolute',tol,0)
 assertVectorsAlmostEqual(Var2,Var22,'absolute',tol,0)
 assertVectorsAlmostEqual(Mu2,Mu22,'absolute',tol,0)
 assertVectorsAlmostEqual(vary,vary2,'absolute',tol,0)
+
+
+function test_correctValues_pFB
+
+G = rand;
+Lam1 = rand;
+Var1 = rand;
+
+Len2 = rand;
+Var2 = rand;
+
+Mu2 = rand;
+vary = rand;
+
+om = rand;
+
+Params = packParamsMPAD(G,Lam1,Var1,Len2,Var2,Mu2,vary,om);
+
+[G2,Lam12,Var12,Len22,Var22,Mu22,vary2,om2] = unpackParamsMPAD(Params);
+
+tol = 1e-5;
+assertVectorsAlmostEqual(G,G2,'absolute',tol,0)
+assertVectorsAlmostEqual(Lam1,Lam12,'absolute',tol,0)
+assertVectorsAlmostEqual(Var1,Var12,'absolute',tol,0)
+assertVectorsAlmostEqual(Len2,Len22,'absolute',tol,0)
+assertVectorsAlmostEqual(Var2,Var22,'absolute',tol,0)
+assertVectorsAlmostEqual(Mu2,Mu22,'absolute',tol,0)
+assertVectorsAlmostEqual(vary,vary2,'absolute',tol,0)
+assertVectorsAlmostEqual(om2,om,'absolute',tol,0)
