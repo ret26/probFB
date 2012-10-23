@@ -28,7 +28,7 @@ function [varx,lamx,om,Info] = fit_probSTFT(y,D,varargin)
 % variance at the cost of introducing some bias, but importantly it
 % prevents local optima in the likelihood. We reduce the degree of
 % smoothing through the optimisation (i.e. this is a coarse to fine
-% method). 
+% method).
 %
 % i.e. we define
 % specTar_{t,n} = a matrix containing the spectra of sections of y, then
@@ -85,15 +85,37 @@ mVar = ones(D,1)/D;
 FLim = [1/50,0.3]; % limits for the centre frequency initialisation
 dfFrac = 1/5; % width of the processes wrt centre-frequency
 fmax = logspace(log10(FLim(1)),log10(FLim(2)),D)';
+%fmax = linspace(FLim(1),FLim(2),D)';
 [om,lamx] = freq2probSpec(fmax,fmax*dfFrac,1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % COARSE TO FINE PROCESS
-numLevels = 40; % number of levels
-numIts = 50; % number of iterations per level
-minT = 200;%200; % minimum segment size to compute spectrum of
-maxT = 3000; % maximum segment size to compute spectrum of
 
+if ~isfield(varargin{1},'numLevels')
+  numLevels = 40; % number of levels
+else
+  numLevels = varargin{1}.numLevels;
+end
+
+if ~isfield(varargin{1},'numIts')
+  numIts = 10; % number of iterations per level
+else
+  numIts = varargin{1}.numIts;
+end
+
+if ~isfield(varargin{1},'minT')
+  minT = 200;%200; % minimum segment size to compute spectrum of
+else
+  minT = varargin{1}.minT;
+end
+
+if ~isfield(varargin{1},'maxT')
+  maxT = 1000; % maximum segment size to compute spectrum of
+else
+  maxT = varargin{1}.maxT;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Constraints on the variables
 minVar = mVar/400; % minimum marginal variance - might want to taper
 omLim = ones(D,1)*[0,pi]; % limits on the centre frequency
@@ -103,9 +125,20 @@ small = 1e-5; % limits on the lambda parameter - might want to
 lamLim = ones(D,1)*[0,1-small];
 
 % Observation noise tapered
-vary_an = logspace(log10(1e-6),log10(1e-10),numLevels);
-		 
-bet = 100; % how strongly to encourage variances to be pruned
+if ~isfield(varargin{1},'vary_an')
+  vary_an = logspace(log10(1e-6),log10(1e-10),numLevels); % annealing settings
+else
+  vary_an = varargin{1}.vary_an;
+end
+
+if ~isfield(varargin{1},'bet')
+  bet = logspace(log10(100),0,numLevels); % how strongly to encourage variances to be pruned
+else
+  bet = logspace(log10(varargin{1}.bet),0,numLevels);
+%  bet = varargin{1}.bet;
+end
+
+
 		 
 T = length(y);
 
@@ -127,20 +160,25 @@ mVarHist(:,1) = mVar;
 if nargin>2
   if isfield(varargin{1},'yHO')
     compHOLike = 1;
+    
+    % compute the full periodogram for the held out data
     yHO = varargin{1}.yHO;
     yHO = yHO(:)/sqrt(varSig);
     
     THO = length(yHO);
     likeHO = repmat(NaN,[numLevels,1]);
+	
     [pgHO,varpg] = welchMethod(yHO,THO,0);
     pgHO = pgHO/(1/2/THO);
+    
+    [pgUR,varpg] = welchMethod(y,THO,0);
   
     if mod(THO,2)==0
-    % if even
-    specHO = [pgHO;pgHO(end-1:-1:2)];
+      % if even
+      specHO = [pgHO;pgHO(end-1:-1:2)];
     else
-    % if odd
-    specHO = [pgHO;pgHO(end:-1:2)];
+      % if odd
+      specHO = [pgHO;pgHO(end:-1:2)];
     end
   else
     compHOLike = 0;
@@ -148,6 +186,22 @@ if nargin>2
 else
   compHOLike = 0;
 end
+
+ 
+% compute the full periodogram for the unregularised objective
+likeUnReg = repmat(NaN,[numLevels,1]);
+
+[pgUR,varpg] = welchMethod(y,T,0);
+pgUR = pgUR/(1/2/T);
+    
+if mod(T,2)==0
+  % if even
+  specUR = [pgUR;pgUR(end-1:-1:2)];
+else
+  % if odd
+  specUR = [pgUR;pgUR(end:-1:2)];
+end
+    
 
 
 for c2f=1:numLevels
@@ -178,15 +232,19 @@ for c2f=1:numLevels
   % Fit the spectrum using probabilistc spectrogram
   [theta,ObjCur,inCur] = minimize(theta,'get_Obj_pSTFT_spec',numIts, ...
 				  vary, specTar,minVar,omLim, ...
-				  lamLim,bet*numFreq(c2f)/numFreq(c2f(1)));
+				  lamLim,bet(c2f)*numFreq(c2f)/numFreq(c2f(1)));
 
 
   if compHOLike==1
     % Compute HO likelihood if asked for
-    [likeHO(c2f,1),dObjTemp] = get_Obj_pSTFT_spec(theta,vary,specHO,minVar, ...
-						   omLim,lamLim,0);
-  
+    [likeHO(c2f,1),dObjTemp] = get_Obj_pSTFT_spec(theta,0,specHO,minVar, ...
+						   omLim,lamLim,0);    
   end
+  
+  % Compute the real objective on the full data too without regularisation
+  [likeUnReg(c2f,1),dObjTemp] = get_Obj_pSTFT_spec(theta,0,specUR,minVar, ...
+							 omLim,lamLim,0);
+  
   
   % Collect information about the current iteration
   Objs = [Objs;ObjCur];
@@ -210,7 +268,7 @@ for c2f=1:numLevels
 	% plot the fit
 	if compHOLike==1
 	  figH =  plot_fit_probSTFT(pg,mVar,om,lamx,mVarHist,omHist,lamHist, ...
-				    Objs,ObjCur,minVar,likeHO);  
+				    Objs,ObjCur,minVar,likeHO,likeUnReg);  
 	else
 	  figH =  plot_fit_probSTFT(pg,mVar,om,lamx,mVarHist,omHist,lamHist, ...
 				    Objs,ObjCur,minVar);  
@@ -219,26 +277,122 @@ for c2f=1:numLevels
     end
   end
 
-% re-initialised the pruned components of the model - doing
-% something dumb ATM
-freq = linspace(0,1/2,length(pg));
-       
-for d=1:D    
-  if mVar(d)/minVar(d)<10
-    mVar(d) = 1/5;
-    om(d) = rand*pi;
-    lam(d) = 0.3;
+% % re-initialised the pruned components of the model - don't reassign
+% on the last iteration
+
+if isfield(varargin{1},'reassign')&c2f<numLevels-1
+  
+  if ~isfield(varargin{1},'reassignThresh')
+    reassignThresh = 8;
+  else
+    reassignThresh = varargin{1}.reassignThresh;
+  end
+  
+  if varargin{1}.reassign==1
+    for d=1:D    
+      if mVar(d)/minVar(d)<reassignThresh
+
+	disp('moving pruned process')
+	  varx = mVar.*(1-lamx.^2);
+	  
+	  % remove current process
+	  lamxCur = lamx; lamxCur(d) = [];
+	  varxCur = varx; varxCur(d) = [];
+	  omCur = om; omCur(d) = [];
+
+	  N = length(specTar);
+	  freqs = linspace(0,0.5,ceil(N/2));
+		 
+	  specMod = sum(get_pSTFT_spec(freqs,lamxCur,varxCur,omCur));
+	  
+	  % reassigning based on differences in spectra
+	  %dspec = specTar(1:ceil(N/2))-specMod';
+	  
+	  % reassigning based on differences in log-spectra
+	  dspec = log(specTar(1:ceil(N/2)))-log(specMod');
+	    
+	  [val,pos] = max(dspec);
+	  
+	  mVar(d) = 1/10;
+	  om(d) = 2*pi*freqs(pos);
+	  lamx(d) = 0.91;
+	  varx = mVar.*(1-lamx.^2);
+	  
+	  % specNew = sum(get_pSTFT_spec(freqs,lamx,varx,om));
+	  %
+	  % figure
+	  % hold on
+	  % plot(freqs,specTar(1:ceil(N/2)),'-k')
+	  % plot(freqs,specMod,'-b')
+	  % plot(freqs,specNew,'-r')
+	  % set(gca,'yscale','log')
+	  % keyboard
+      end
+    end
   end
 end
 
-  
-  % for n=1:
+% The following merging heuristic didn't perform well - I think that
+% the shrinkage of the marginal variance should, to some extent, be
+% sufficient to discourage two processes doing the same thing
 
-  %     theta = [log(mVar-minVar);...
-  % 	   log(cosCF-cosCFLim(:,1))-log(cosCFLim(:,2)-cosCF);...
-  % 	   log(cosDF-cosDFLim(:,1))-log(cosDFLim(:,2)-cosDF)]; 
-  %     [likeHO(c2f,1),dObjTemp] = getSpecAR2Obj(theta,vary,0,specTar,minVar,cosCFLim,cosDFLim);
-  % end
+% if isfield(varargin{1},'merge')&c2f<numLevels-1
+
+%   if varargin{1}.merge==1
+%     % find the centre frequencies and bandwidths
+%     [fmax,df] = probSpec2freq(om,lamx,ones(D,1));
+%     [val,ind] = sort(fmax);
+%     fmax = fmax(ind)*numFreq(c2f);
+%     df = df(ind)*numFreq(c2f);
+    
+    
+%       for d=2:D    
+% 	if fmax(d)-fmax(d-1)<1/2 &  abs(df(d)-df(d-1))<1/2
+	  
+% 	  disp('merging pruned process')
+% 	  mVar(d-1) = mVar(d)+mVar(d-1);
+% 	  om(d-1) = (om(d) + om(d-1))/2;
+	  
+% 	  % reassigning deleted process
+	  
+% 	  varx = mVar.*(1-lamx.^2);
+	  
+% 	  lamxCur = lamx; %lamxCur(d) = [];
+% 	  varxCur = varx; %varxCur(d) = [];
+% 	  omCur = om; %omCur(d) = [];
+	  
+% 	  N = length(specTar);
+% 	  freqs = linspace(0,0.5,ceil(N/2));
+	  
+% 	  specMod = sum(get_pSTFT_spec(freqs,lamxCur,varxCur,omCur));
+	  
+% 	  % reassigning based on differences in spectra
+% 	  %dspec = specTar(1:ceil(N/2))-specMod';
+	  
+% 	  % reassigning based on differences in log-spectra
+% 	  dspec = log(specTar(1:ceil(N/2)))-log(specMod');
+	  
+% 	  [val,pos] = max(dspec);
+	  
+% 	  mVar(d) = 1/10;
+% 	  om(d) = 2*pi*freqs(pos);
+% 	  lamx(d) = 0.95;
+% 	  varx = mVar.*(1-lamx.^2);
+	  
+% 	  % specNew = sum(get_pSTFT_spec(freqs,lamx,varx,om));
+% 	  % %
+% 	  %  figure
+% 	  %  hold on
+% 	  %  plot(freqs,specTar(1:ceil(N/2)),'-k')
+% 	  %  plot(freqs,specMod,'-b')
+% 	  %  plot(freqs,specNew,'-r')
+% 	  %  legend('data','old model','new model')
+% 	  %  set(gca,'yscale','log')
+% 	  %  keyboard
+% 	end
+%       end
+%   end
+% end
 
 end
 
@@ -254,3 +408,5 @@ varx = rescale*varx;
 if compHOLike==1
   Info.likeHO=likeHO;
 end
+
+Info.likeUnReg=likeUnReg;

@@ -48,7 +48,12 @@
 
   ax21=axes('position',posax21);
   hold on;
-  plot([1:length(Objs)],Objs,'-b')
+
+  % only plot the data objective if there isn't held out data
+  if nargin<11
+    plot([1:length(Objs)],Objs,'-b')
+  end
+  
   set(gca,'xticklabel','')
   ylabel('obj')
 
@@ -56,11 +61,22 @@
     likeHO = varargin{1};
     numLikeHO = sum(~isnan(likeHO));
     plot(linspace(1,length(Objs),numLikeHO),likeHO(1:numLikeHO),'-r','linewidth',2)
-   legend('training','test - held out')
-   title(['Held out like: ',num2str(likeHO(numLikeHO))])
+   legend('test - held out')
+   str1 = ['Held out like: ',num2str(likeHO(numLikeHO))];
    end
 
-  
+   if nargin>11
+    likeUnReg = varargin{2};
+    numLikeUnReg = sum(~isnan(likeUnReg));
+    plot(linspace(1,length(Objs),numLikeUnReg),likeUnReg(1:numLikeUnReg),'-b','linewidth',2)
+   legend('test - held out','training un-regularised')
+      str1 = [str1,'   ','training like: ',num2str(likeUnReg(numLikeUnReg))];
+   end
+   
+   if nargin>10
+     title(str1)
+   end
+   
   ax31=axes('position',posax31);
   hold on;
   plot([length(Objs)-length(ObjCur)+1:length(Objs)],ObjCur,'-k')
@@ -100,7 +116,7 @@
   
   ax1=axes('position',posax1);
   hold on
-  NumFreqs = 500;
+  NumFreqs = 1000;%max([500,length(pg)];
     
   freqs = linspace(0,0.5,NumFreqs);
   spec = get_pSTFT_spec(freqs,lamx,varx,om);
