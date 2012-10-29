@@ -7,10 +7,12 @@ function compareStatistics(y1,y2,X1a,X1b,X2a,X2b,Aa,Ab,fs)
 % generative model
 
 
+[T,D] = size(Aa); 
+
 figure
 subplot(2,3,1)
 plot(var(real(X1a)),'-r','linewidth',2); hold on; plot(var(real(X1b)));
-legend('sampled','data')
+legend('data','sampled')
 title('variance of X1')
 
 subplot(2,3,2)
@@ -34,6 +36,34 @@ hold on; plot(cov_logAa(:),'-r','linewidth',2); plot(cov_logAb(:));
 title('covariance of log(A) - comodulation')
 
 
+figure
+
+ax_lim = [1/2,D+1/2];
+subplot(2,2,1)
+hold on
+title('covariance data amp')
+imagesc(covAa-diag(diag(covAa)))
+set(gca,'xlim',ax_lim,'ylim',ax_lim)
+
+subplot(2,2,2)
+hold on
+title('covariance sampled amp')
+imagesc(covAb-diag(diag(covAb)))
+set(gca,'xlim',ax_lim,'ylim',ax_lim)
+
+subplot(2,2,3)
+hold on
+title('covariance data log-amp')
+imagesc(cov_logAa-diag(diag(cov_logAa)))
+set(gca,'xlim',ax_lim,'ylim',ax_lim)
+
+subplot(2,2,4)
+hold on
+title('covariance sampled log-amp')
+imagesc(cov_logAb-diag(diag(cov_logAb)))
+set(gca,'xlim',ax_lim,'ylim',ax_lim)
+
+
 
 NumFreq = 1000;
 [pg1,varpg] = welchMethod(y1,NumFreq,20); 
@@ -49,3 +79,45 @@ set(gca,'yscale','log')
 legend('y1','y2','location','northeast')
 xlabel('frequency /Hz')
 ylabel('PSD')
+
+figure
+subplot(2,1,1)
+imagesc(log(Aa)')
+
+subplot(2,1,2)
+imagesc(log(Ab)')
+
+
+[T,D] = size(Aa);
+
+figure;
+
+maxLag = 500;
+
+rootD = ceil(sqrt(D));
+
+
+
+for d=1:D
+  
+  logAa = log(Aa(:,d));
+  logAa = logAa - mean(logAa);
+
+  logAb = log(Ab(:,d));
+  logAb = logAb - mean(logAb);
+
+  aCorr= xcorr(logAa,maxLag);
+  bCorr= xcorr(logAb,maxLag);
+
+%  aCorr = aCorr/max(aCorr);
+%  bCorr = bCorr/max(bCorr);
+  
+  subplot(rootD,rootD,d)
+  hold on
+  plot(aCorr,'-k','linewidth',2)
+  plot(bCorr,'-r')
+  
+
+end
+
+
