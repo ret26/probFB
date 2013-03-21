@@ -107,7 +107,8 @@ if dispFigs==1
 end
 
 opts.numIts = 200; 
-[X1Est,X2Est,ParamsEst,Info] = mPAD_train_G(y,X2,Params,opts);
+X2Init = zeros(size(X2));
+[X1Est,X2Est,ParamsEst,Info] = mPAD_train_G(y,X2Init,Params,opts);
 
 GEst = ParamsEst.G;
 AEst = log(1+exp(X2Est(1:T,:)*GEst'+ones(T,1)*Mu2'));
@@ -154,6 +155,7 @@ function test_initialised_at_random_G_and_true_X2
 % Forward model Settings
 dispFigs=1;
 opts.verbose = dispFigs;
+opts.progress_chunk = 2;
 
 seed = 1; 
 randn('state',seed)
@@ -209,7 +211,8 @@ ParamsInit = Params;
 ParamsInit.G = GInit;
 
 opts.numIts = 200;
-[X1Est,X2Est,ParamsEst,Info] = mPAD_train_G(y,X2,ParamsInit,opts);
+X2Init = zeros(size(X2));
+[X1Est,X2Est,ParamsEst,Info] = mPAD_train_G(y,X2Init,ParamsInit,opts);
 
 GEst = ParamsEst.G;
 AEst = log(1+exp(X2Est(1:T,:)*GEst'+ones(T,1)*Mu2'));
