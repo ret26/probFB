@@ -53,10 +53,10 @@
     else
       sign = 1;
     end
-    
+
     plot(sign*X2old(1:T,k),'-k','linewidth',2)
     plot(sign*X2(1:T,k),'-r','linewidth',1)
-    set(gca,'xlim',[1,T],'ylim',[min(sign*X2old(1:T,k)),max(sign*X2old(1:T,k))])
+    set(gca,'xlim',[1,T],'ylim',[min(sign*X2old(1:T,k)),max(sign*X2old(1:T,k))+1e-9])
     
     ylabel(['X2_',num2str(k)])
 
@@ -84,7 +84,7 @@
     plot(Ychan(:,d),'-k')
     plot(A(:,d),'-r','linewidth',2)
     ylabel(['channel_',num2str(d)])
-    set(gca,'xlim',[1,T],'ylim',[min(Ychan(:,d)),max(Ychan(:,d))])
+    set(gca,'xlim',[1,T],'ylim',[min(Ychan(:,d)),max(Ychan(:,d))+1e-7])
     
     if d==D
       xlabel('time')
