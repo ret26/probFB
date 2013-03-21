@@ -36,15 +36,6 @@ saveDir = '~/sandbox/kyriacos/sounds/';
 % fac = initialise the time-scales of the modulation using fac/channel-centre-frequency
 
 
-% File = '74 - Sentences'; % Name of file to load
-% fs = 16000; % sampling rate of file
-% RngLim = round([fs*1/2+1,2.1*fs]);  % Picks a small range
-% DS = 1; % down sample further if requested
-% D = 20; % number channels (don't set too high)
-% K = D;  % number of features
-% fac = 4; % initialise the time-scales of the modulation using fac/channel-centre-frequency
-
-
 % File = '83 - Stream'; % Name of file to load
 % fs = 48000;
 % RngLim = round([fs*1/2+1,5.1*fs]);  % Picks a small range
@@ -63,7 +54,7 @@ saveDir = '~/sandbox/kyriacos/sounds/';
 
 % File = '41 - Mountain Stream - Deep'; % Name of file to load
 % fs = 44100;
-% RngLim = round([fs*3+1,8.1*fs]);  % Picks a small range
+% RngLim = round([fs*3+1,10.1*fs]);  % Picks a small range
 % DS = 2; % should drop to DS = 2 eventually
 % fac = 4;
 % D = 20; % number channels (don't set too high)
@@ -101,26 +92,68 @@ saveDir = '~/sandbox/kyriacos/sounds/';
 % fs = 11025;
 % RngLim = round([fs*0+1,floor(3.9*fs)]);  % Picks a small range
 % DS = 1; % should drop to DS = 2 eventually
-% fac = 4;
+% fac = -1500;
 % D = 20; % number channels (don't set too high)
-% K = 4;
+% K = 3;
 
 % File = '81 - Wind'; % Name of file to load
 % fs = 11025;
 % RngLim = round([fs*0+1,floor(7.5*fs)]);  % Picks a small range
 % DS = 1; % should drop to DS = 2 eventually
-% %opts.minT = 500; opts.maxT = 5000;
-% fac = 4;
-% D = 10; % number channels (don't set too high)
+% opts.minT = 1000; opts.maxT = 2000;
+% fac = -1000;
+% D = 20; % number channels (don't set too high)
 % K = 3;
 
-File = '54 - Rain On Leaves'; % Name of file to load
-fs = 44100;
-RngLim = round([fs*13.5+1,floor(18.5*fs)]);  % Picks a small range
-DS = 1; 
-fac = 2;
+% File = '54 - Rain On Leaves'; % Name of file to load
+% fs = 44100;
+% %RngLim = round([fs*13.5+1,floor(18.5*fs)]);  % Picks a small range
+% RngLim = round([fs*1+1,floor(11*fs)]);  % Picks a small range
+% DS = 2; 
+% fac = 2;
+% D = 20; % number channels (don't set too high)
+% K = 15;
+
+File = '74 - Sentences'; % Name of file to load
+fs = 16000; % sampling rate of file
+RngLim = round([fs*1/2+1,2.1*fs]);  % Picks a small range
+DS = 1; % down sample further if requested
 D = 20; % number channels (don't set too high)
-K = D;
+K = D;  % number of features
+fac = 4; % initialise the time-scales of the modulation using fac/channel-centre-frequency
+
+% File = '88 - Rain Noisy';
+% fs = 44100;
+% RngLim = round([fs*3+1,floor(6*fs)]);  % Picks a small range
+% DS = 2; 
+% fac = 2;
+% D = 20; % number channels (don't set too high)
+% K = 3;
+
+% File = '89 - Fire'; % Name of file to load
+% fs = 44100;
+% RngLim = round([fs*3+1,10.1*fs]);  % Picks a small range
+% DS = 2; % should drop to DS = 2 eventually
+% fac = 3;
+% D = 20; % number channels (don't set too high)
+% K = 3;
+
+% File = '90 - Fire'; % Name of file to load
+% fs = 22050;
+% RngLim = round([fs*3+1,10.1*fs]);  % Picks a small range
+% DS = 1; 
+% fac = 4;
+% D = 20; % number channels (don't set too high)
+% K = 3;
+
+% File = '91 - Rain'; % Name of file to load
+% fs = 44100;
+% %RngLim = round([fs*13.5+1,floor(18.5*fs)]);  % Picks a small range
+% RngLim = round([fs*1+1,floor(8*fs)]);  % Picks a small range
+% DS = 2; 
+% fac = 2;
+% D = 20; % number channels (don't set too high)
+% K = 10;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load signal and pre-process
@@ -142,14 +175,17 @@ opts.verbose = 1; % view plots of the fitting process
 [Var1,Lam1,om,Info] = fit_probSTFT(y,D,opts); % trains filters to
                                               % match the spectrum
 
- % Order carriers by centre frequency
+% Order carriers by centre frequency
 [om,ind] = sort(om);
 Var1 = Var1(ind); 
 Lam1 = Lam1(ind); 
 
 % useful to know the bandwidths and marginal variances of the
 % carriers, so computing them here:
+
 [fmax,df,varMa] = probSpec2freq(om,Lam1,Var1);
+
+ySampNoise = samplePFB(Lam1,Var1,om,0,T);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Filtering step
@@ -157,6 +193,8 @@ Lam1 = Lam1(ind);
 
 vary = 0;
 Z = probFB(y,Lam1,Var1,om,vary); % applies filters to the signal, replaced AR2 filter bank (much faster)
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Demodulation
@@ -268,11 +306,13 @@ if ICA==1
   typ = 'ICA';
 else
   Params = ParamsSFA;
-  Params.G = ParamsSFA.G*1.4; % seems to make things sound much
+  Params.G = ParamsSFA.G*1.4; % ParamsSFA.G*1.4 - seems to make things sound much
                                  % better presumably countering
                                  % biases in the amplitude estimation
   X2 = XSFA;
   typ = 'SFA';
+  figure
+  imagesc(ParamsSFA.G)
 end
 
 opts.numIts = 50;
@@ -289,6 +329,7 @@ Dims = packDimsMPAD(D,K,TSamp); % Dimensionality of the sampled signal
 [ySampICA,X1SampICA,X2SampICA,ASampICA] = sampleMPAD(ParamsICA,Dims);
 [ySampSFA,X1SampSFA,X2SampSFA,ASampSFA] = sampleMPAD(ParamsSFA,Dims);
 [ySampFT,X1SampFT,X2SampFT,ASampFT] = sampleMPAD(ParamsFT,Dims);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Checking the statistics of the sampled signals to see whether
@@ -308,11 +349,16 @@ y = y/sqrt(var(y));
 ySampFT = ySampFT/sqrt(var(ySampFT));
 compareStatistics(y,ySampFT,C',X1SampFT,X2,X2SampFT,A',ASampFT,fs)
 
+figure
+hold on
+plot(A(10,:));
+plot(ASampFT(:,10),'-r')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SAVE
 savePath = [saveDir,File(1:2),'/'];
 
-baseName = [File(1:2),'_D',num2str(D),'_LrnLen_synth_'];
+baseName = [File(1:2),'_D',num2str(D),'_LrnLen_synth_KyriacosTest_'];
 
 name1 = [baseName,typ];
 wavwrite(0.95*ySampFT/max(abs(ySampFT)),fs,[savePath,name1,'.wav']);
@@ -328,5 +374,11 @@ save([savePath,name3,'.mat'],'ParamsICA')
 
 name4 = [baseName,'orig'];
 wavwrite(0.95*y/max(abs(y)),fs,[savePath,name4,'.wav']);
+
+name6 = [baseName,'reversed'];
+wavwrite(0.95*y(end:-1:1)/max(abs(y)),fs,[savePath,name6,'.wav']);
+
+name5 = [baseName,'noise'];
+wavwrite(0.95*ySampNoise/max(abs(ySampNoise)),fs,[savePath,name5,'.wav']);
 
 ['! mplayer ',name1,'.wav']
