@@ -82,10 +82,10 @@ ylabel('PSD')
 
 figure
 subplot(2,1,1)
-imagesc(log(Aa)')
+imagesc(log(Aa)'-mean(log(Aa(:))))
 
 subplot(2,1,2)
-imagesc(log(Ab)')
+imagesc(log(Ab)'-mean(log(Ab(:))))
 
 
 [T,D] = size(Aa);
