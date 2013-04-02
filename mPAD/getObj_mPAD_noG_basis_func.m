@@ -115,8 +115,8 @@ function [Obj,dObj] = getObj_mPAD_noG_basis_func(z2,y,Params,tol);
 Obj = (-ObjA+ObjB)/T;
 dObj = [dObjAdZ2(:)+dObjBdZ2(:)]/T;
 
-% Obj = ObjB;
-% dObj = [dObjBdZ2(:);zeros(D*K,1)];
+ % Obj = ObjB/T;
+ % dObj = [dObjBdZ2(:)]/T;
 
 %Obj = -ObjA;
 %dObj = [dObjAdZ2(:);dObjAdG(:)];
