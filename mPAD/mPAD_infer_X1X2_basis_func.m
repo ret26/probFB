@@ -91,7 +91,11 @@ for l=1:L
   % Display some information to the user
   str1 = ['Progress ',num2str(l),'/',num2str(L),];
   str2 = ['Obj ',num2str(ObjCur(end))];
-  str3 = ['dObj ',num2str(diff(ObjCur(end-1:end)))];
+  if length(ObjCur)>1
+    str3 = ['dObj ',num2str(diff(ObjCur(end-1:end)))];
+  else
+    str3 = ['dObj 0'];
+  end
   str4 = ['time ',num2str(ceil(timCur/6)/10),'mins'];
   str5 = ['total time ',num2str(ceil(sum(tim)/6)/10),'mins'];
   str7 = ['dX2 ',num2str(round(dX2*1000)/10),'%%'];
@@ -107,6 +111,7 @@ fprintf('\n')
 % Save information about the optimisation
 Info.Obj = Obj;
 Info.it = it;
+Info.Z2 = Z2;
 
 % Estimate X1
 A = log(1+exp(X2(1:T,:)*G'+ones(T,1)*Mu2'));
@@ -114,3 +119,4 @@ A = log(1+exp(X2(1:T,:)*G'+ones(T,1)*Mu2'));
 
 [X1,covX1] = getFBLDSOutput(Xfin,Pfin);
 X1 = X1';
+
