@@ -118,7 +118,7 @@ File = '74 - Sentences'; % Name of file to load
 fs = 16000; % sampling rate of file
 RngLim = round([fs*1/2+1,2.1*fs]);  % Picks a small range
 DS = 1; % down sample further if requested
-D = 20; % number channels (don't set too high)
+D = 10; % number channels (don't set too high)
 K = D;  % number of features
 fac = 4; % initialise the time-scales of the modulation using fac/channel-centre-frequency
 
@@ -194,7 +194,11 @@ ySampNoise = samplePFB(Lam1,Var1,om,0,T);
 vary = 0;
 Z = probFB(y,Lam1,Var1,om,vary); % applies filters to the signal, replaced AR2 filter bank (much faster)
 
+<<<<<<< HEAD
 keyboard
+=======
+%keyboard
+>>>>>>> 6e79789c057b1f781717bef054899692315ece7b
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Demodulation
