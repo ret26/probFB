@@ -49,7 +49,7 @@ delta = 1e-5;
 Z2init = randn(T,K);
 
 z2g = [Z2init(:);Params.G(:)];
-
+tol = 1;
 GScale = rand(K,1);
 d=checkgrad('getObj_mPAD_fixG_basis_func',z2g,delta,y,Params,GScale,tol)
 

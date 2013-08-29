@@ -56,8 +56,8 @@ for l=1:K/2
   A(ind,ind) = Lam1(l)*[cos(om(l)),-sin(om(l));sin(om(l)),cos(om(l))];
 end
 
-temp2 = [Var1';
-         Var1'];
+temp2 = [Var1(:)';
+         Var1(:)'];
 
 Q = diag(temp2(:));
 
@@ -67,8 +67,8 @@ T_R = length(vary);
 x0 = zeros(K,1);
 
 mVar = Var1./(1-Lam1.^2);
-temp3 = [mVar';
-	 mVar'];
+temp3 = [mVar(:)';
+	 mVar(:)'];
 
 P0 = diag(temp3(:));
 
@@ -141,11 +141,11 @@ for t=1:T,
     R = vary;
     invR = inv(R);
   end
-  
+
   if verbose==1&mod(t-1,CntInt)==0
     fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
   end
-    
+
   if (K<D)
     temp1= R\C;%  rdiv(C,R);
     temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
