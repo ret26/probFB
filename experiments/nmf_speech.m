@@ -11,85 +11,285 @@ saveDir = '~/Data/probFB/nmf/';
 % load signal
 File = '74 - Sentences'; % Name of file to load
 fs = 16000; % sampling rate of file
-RngLim = round([fs*1/2+1,2.1*fs]);  % Picks a small range
+RngLimTrain = round([fs*1/2+1,2.1*fs]);  % Picks a small range
+RngLimTest = round([fs*13.7+1,15.4*fs]);  % Picks a small range
+
 DS = 1; % down sample further if requested
-D = 10; % number channels (don't set too high)
-K = D;  % number of features
+D = 20; % number channels (don't set too high)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load signal and pre-process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [y,fs] = wavread([soundPath,File,'.wav']); % reads in the file
-y = y(RngLim(1):RngLim(2),1); 
-y = resample(y, fs/DS, fs); % downsample the input
+yTrain = y(RngLimTrain(1):RngLimTrain(2),1); 
+yTrain = resample(yTrain, fs/DS, fs); % downsample the input
 fs = fs/DS;
-y = y/sqrt(var(y)); % rescale the input to unit variance
-T = length(y);
+yTrain = yTrain/sqrt(var(yTrain)); % rescale the input to unit variance
+T = length(yTrain);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Train filter
+%% Setup the filter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+trainFilter = 0;
 
-% Learn properties of the filters (centre frequency and width)
-opts.verbose = 1; % view plots of the fitting process
-[Var1,Lam1,om,Info] = fit_probSTFT(y,D,opts); % trains filters to
+if trainFilter==1
+  % Learn properties of the filters (centre frequency and width)
+  opts.verbose = 1; % view plots of the fitting process
+  opts.minT = 500;
+  opts.minT = 5000;
+  opts.numIts = 10;
+  DInit = D;
+  [Var1,Lam1,om,Info] = fit_probSTFT(yTrain,DInit,opts); % trains filters to
                                               % match the spectrum
-% Order carriers by centre frequency
-[om,ind] = sort(om);
-Var1 = Var1(ind); 
-Lam1 = Lam1(ind); 
 
-% useful to know the bandwidths and marginal variances of the
-% carriers, so computing them here:
+  % Order carriers by centre frequency
+  [om,ind] = sort(om);
+  Var1 = Var1(ind); 
+  Lam1 = Lam1(ind); 
 
-[fmax,df,varMa] = probSpec2freq(om,Lam1,Var1);
+  % useful to know the bandwidths and marginal variances of the
+  % carriers, so computing them here:
 
-ySampNoise = samplePFB(Lam1,Var1,om,0,T);
+  [fmax,df,varMa] = probSpec2freq(om,Lam1,Var1);
+
+  %ySampNoise = samplePFB(Lam1,Var1,om,0,T);
+else
+  dfFrac = 1/10;
+  fmax = logspace(log10(1/50),log10(0.3),D)';
+  [om,Lam1,Var1] = freq2probSpec(fmax,fmax*dfFrac,ones(D,1)/D);
+end
+
+% plots the sprectrum of the filter
+figH = plot_pSTFT(Var1,om,Lam1,fs,1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Filtering step
+%% Apply the filter and produce the spectrogram
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 vary = 0;
-Z = probFB(y,Lam1,Var1,om,vary); % applies filters to the signal, replaced AR2 filter bank (much faster)
+ZTrain = probFB(yTrain,Lam1,Var1,om,0); % applies filters to the signal, replaced AR2 filter bank (much faster)
 
-A = abs(Z)';
+ATrain = abs(ZTrain').^2;
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % Forward model Settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Train the model
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+K = 20;  % number of features
 
-% muinf = mean(A(:));
-% varinf = var(A(:));
-% lam = linspace(0.1,0.9,K);
-% vary = zeros(T,1);
+WInit = exp(randn(K,D))/1;
+HInit = exp(randn(T,K));
+vary = zeros(T,D);
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % TEST
+% initialise with regular NMF
+Opts.restarts = 10;
+Opts.numIts = 20000;
+[WEst1,HEst1,info1] = nmf(ATrain,WInit,HInit,[],[],[],vary,Opts);
 
-% WInit = exp(randn(K,D))/1;
-% HInit = exp(randn(T,K))/1;
+% order according to slowness (mean square derivative)
+fastness = mean(diff(HEst1).^2)./var(HEst1);
+[val,ind] = sort(fastness,'descend');
+HEst1 = HEst1(:,ind); 
+WEst1 = WEst1(ind,:);
 
-% Opts.restarts = 5;
-% [WEst,HEst,info] = nmf(A,WInit,HInit,muinf,varinf,lam,vary,Opts);
+%%% Things tried for the IG version of the temporal priors -- failed
+% % % set prior parameters (hacky as boot-strapping from data) 
+% % muinf = mean(HEst1);
+% % varinf = var(HEst1);
+% lam = mean((HEst1(1:T-1,:)-ones(T-1,1)*muinf).*(HEst1(2:T,:)-ones(T-1,1)*muinf))./var(HEst1);
 
-% figure
-% plot(info.Obj)
+% Versions where we set the means and the variances from the data
+% mean and variance -- the moment matching initialisation
+% muinf = (mean(ATrain)*sum(WEst1,1)'/sum(sum(WEst1,1).^2))*ones(1,K);
+% varinf = (var(ATrain)*sum(WEst1.^2,1)'/sum(sum(WEst1.^2,1).^2))*ones(1,K);
 
-% figure
-% for k=1:K
-%   subplot(K,1,k)
-%   hold on
-%   plot(H(:,k),'-k')
-%   plot(HEst(:,k),'-r')
-% set(gca,'yscale','log')
-% end
+% %muinf = mean(ATrain,1)*WEst1'/(WEst1*WEst1');
+% %WEst1sq = WEst1.^2;
+% %varinf = var(ATrain,1)*WEst1sq'/(WEst1sq*WEst1sq');
 
-% figure
-% subplot(2,1,2)
-% imagesc(WEst)
+% lam = zeros(1,K);
+% Opts.numIts = 5000;
+% Opts.restarts = 1;
+% [WEst2,HEst2,info2] = nmf(ATrain,WEst1,HEst1,muinf,varinf,lam,vary,Opts);
+
+% trying truncated Gaussian temporal priors instead
+lam = zeros(1,K);
+
+% set lam from the correlation between successive hs
+muinf = mean(HEst1);
+varinf = var(HEst1);
+lam = mean((HEst1(1:T-1,:)-ones(T-1,1)*muinf).*(HEst1(2:T,:)- ones(T-1,1)*muinf))./var(HEst1);
+
+
+Opts.numIts = 20000;
+Opts.restarts = 1;
+[WEst2,HEst2,info2] = nmf(ATrain,WEst1,HEst1,[],varinf,lam,vary,Opts);
+%[WEst2,HEst2,info2] = nmf(ATrain,WEst2,HEst2,[],varinf,lam,vary,Opts);
+
+% PLOT RESULTS
+figure
+hold on
+plot(info1.Obj,'-r')
+plot(info2.Obj,'-k')
+ 
+figure
+for k=1:K
+  subplot(K,1,k)
+  hold on
+  plot(HEst1(:,k),'-r')
+  plot(HEst2(:,k),'-k')
+
+  
+set(gca,'yscale','log')
+end
+
+figure
+subplot(3,1,1)
+imagesc(log(ATrain)')
+
+subplot(3,1,2)
+imagesc(log(HEst1*WEst1)')
+
+subplot(3,1,3)
+imagesc(log(HEst2*WEst2)')
+
+%mean(abs(HEst1*WEst1-ATrain))
+%mean(abs(HEst2*WEst2-ATrain))
+snr1_a = 10*(log10(mean(ATrain.^2,1))-log10(mean((HEst1*WEst1-ATrain).^2,1)));
+snr2_a = 10*(log10(mean(ATrain.^2,1))-log10(mean((HEst2*WEst2-ATrain).^2,1)));
+
+snr1_loga = 10*(log10(mean(log(ATrain).^2,1))-log10(mean((log(HEst1*WEst1)-log(ATrain)).^2,1)));
+snr2_loga = 10*(log10(mean(log(ATrain).^2,1))-log10(mean((log(HEst2*WEst2)-log(ATrain)).^2,1)));
+
+disp(['upper limit on SNRs ',num2str([mean(snr2_a),mean(snr2_loga)])]);
+
+figure
+subplot(2,2,1)
+hold on
+title('NMF')
+imagesc(WEst1)
+set(gca,'xlim',[1,D],'ylim',[1,K])
+
+subplot(2,2,2)
+hold on
+title('tNMF')
+imagesc(WEst2)
+set(gca,'xlim',[1,D],'ylim',[1,K])
+
+subplot(2,2,3)
+hold on
+title('NMF')
+imagesc(log(WEst1))
+set(gca,'xlim',[1,D],'ylim',[1,K])
+
+subplot(2,2,4)
+hold on
+title('tNMF')
+imagesc(log(WEst2))
+set(gca,'xlim',[1,D],'ylim',[1,K])
 
 % subplot(2,1,1)
 % imagesc(W)
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TESTING
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Load signal and pre-process
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[y,fs] = wavread([soundPath,File,'.wav']); % reads in the file
+yTest = y(RngLimTest(1):RngLimTest(2),1); 
+yTest = resample(yTest, fs/DS, fs); % downsample the input
+fs = fs/DS;
+yTest = yTest/sqrt(var(yTest)); % rescale the input to unit variance
+T = length(yTest);
+
+% clean spectrogram computed here
+ZTest = probFB(yTest,Lam1,Var1,om,0); 
+ATest = abs(ZTest').^2;
+
+L = 3;
+varys = [logspace(log10(1e-3),log10(10),L)];
+
+%L=1;
+%varys = 1;
+
+HInit = exp(randn(T,K))/10000;
+
+mse_a = zeros(L,1);
+mse_loga = zeros(L,1);
+mse_orig_a = zeros(L,1);
+mse_orig_loga = zeros(L,1);
+
+snr_orig_a = zeros(L,D);
+snr_a = zeros(L,D);
+
+snr_orig_loga = zeros(L,D);
+snr_loga = zeros(L,D);
+
+opts_inf.numIts = 10000;
+opts_inf.progress_chunk = 500;
+%opts_inf.restarts = 0;
+
+for l=1:L
+  disp(['Progress ',num2str(l),'/',num2str(L)]);
+
+  % set the state 
+  randn('state',1);
+  
+  % noisy signal
+  yNoisy = yTest + randn(T,1)*sqrt(varys(l));
+  ZNoisy = probFB(yNoisy,Lam1,Var1,om,0); 
+  ANoisy = abs(ZNoisy').^2;
+
+  % figure out the noise levels -- this is done empirically, but we
+  % could do this analytically if needed
+  filt_noise = probFB(randn(T,1)*sqrt(varys(l)),Lam1,Var1,om,0);
+  varyCur = ones(T,1)*var(filt_noise');
+  
+  % denoise using NMF
+%  [HTest,info] = nmf_inf(ANoisy,WEst2,HInit,[],[],[],varyCur,opts_inf);
+  [HTest,info] = nmf_inf(ANoisy,WEst2,HInit,[],varinf,lam,varyCur,opts_inf);
+  ADenoise = HTest*WEst2;
+  
+  % figure out the amount NMF has denoised the spectrogram by
+  mse_orig_a(l) = mean((ATest(:)-ANoisy(:)).^2);
+  mse_orig_loga(l) = mean((log(ATest(:))-log(ANoisy(:))).^2);
+  mse_a(l) = mean((ATest(:)-ADenoise(:)).^2);
+  mse_loga(l) = mean((log(ATest(:))-log(ADenoise(:))).^2);
+
+  snr_orig_a(l,:) = 10*(log10(sum(ATest.^2))-log10(sum((ATest-ANoisy).^2)));
+  snr_orig_loga(l,:) = 10*(log10(sum(log(ATest).^2))-log10(sum((log(ATest)-log(ANoisy)).^2)));
+  snr_a(l,:) = 10*(log10(sum(ATest.^2))-log10(sum((ATest-ADenoise).^2)));
+  snr_loga(l,:) = 10*(log10(sum(log(ATest).^2))-log10(sum((log(ATest)-log(ADenoise)).^2)));
+  
+  % to implement -- reconstruction of the signal via least squares
+
+  % figure
+  % subplot(3,1,1)
+  % imagesc(log(ATest)')
+  
+  % subplot(3,1,2)
+  % imagesc(log(ADenoise)')
+  
+  % subplot(3,1,3)
+  % imagesc(log(ANoisy)')
+%  keyboard
+end
+
+figure
+subplot(1,2,1)
+hold on
+plot(mean(snr_orig_a,2),mean(snr_a-snr_orig_a,2),'.-')
+
+
+subplot(1,2,2)
+hold on
+plot(mean(snr_orig_loga,2),mean(snr_loga-snr_orig_loga,2),'.-')
+
+
+[mean(snr_a-snr_orig_a,2)';
+mean(snr_loga-snr_orig_loga,2)']
