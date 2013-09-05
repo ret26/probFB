@@ -78,8 +78,9 @@ ATrain = abs(ZTrain').^2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 K = 20;  % number of features
 
-WInit = exp(randn(K,D))/1;
-HInit = exp(randn(T,K));
+WInit = exp(randn(K,D));
+ks = ceil(T*rand(K,1));
+WInit = A(ks,:);
 vary = zeros(T,D);
 
 % initialise with regular NMF
@@ -223,12 +224,14 @@ mse_a = zeros(L,1);
 mse_loga = zeros(L,1);
 mse_orig_a = zeros(L,1);
 mse_orig_loga = zeros(L,1);
-
 snr_orig_a = zeros(L,D);
 snr_a = zeros(L,D);
-
 snr_orig_loga = zeros(L,D);
 snr_loga = zeros(L,D);
+snr_orig_y = zeros(L,1);
+snr_y = zeros(L,1);
+pesq_before = zeros(L,1);
+pesq_after = zeros(L,1);
 
 opts_inf.numIts = 10000;
 opts_inf.progress_chunk = 500;
@@ -265,9 +268,21 @@ for l=1:L
   snr_orig_loga(l,:) = 10*(log10(sum(log(ATest).^2))-log10(sum((log(ATest)-log(ANoisy)).^2)));
   snr_a(l,:) = 10*(log10(sum(ATest.^2))-log10(sum((ATest-ADenoise).^2)));
   snr_loga(l,:) = 10*(log10(sum(log(ATest).^2))-log10(sum((log(ATest)-log(ADenoise)).^2)));
-  
-  % to implement -- reconstruction of the signal via least squares
 
+  % reconstruction of the signal via least squares
+  spec = get_probFB_spec(Lam1,Var1,om,0,T);
+  lamRec = 0; varyRec = (1-lamRec^2);
+  yInit = randn(T,1)/1000;
+  [yDenoise,aRec,info3] = recon_FB_mag(yInit,ADenoise.^0.5,spec,[],lamRec,varyRec);
+
+  % evaluate SNR and perceptual improvement
+  snr_orig_y(l) = 10*(log10(sum(yTest.^2))-log10(sum((yTest-yNoisy).^2)));
+  snr_y(l) = 10*(log10(sum(yTest.^2))-log10(sum((yTest-yDenoise).^2)));
+
+  pesq_before(l) = pesq(yTest, yNoisy, fs);
+  pesq_after(l) = pesq(yTest, yDenoise, fs);
+
+  
   % figure
   % subplot(3,1,1)
   % imagesc(log(ATest)')
@@ -283,13 +298,34 @@ end
 figure
 subplot(1,2,1)
 hold on
+title('spectrogram')
 plot(mean(snr_orig_a,2),mean(snr_a-snr_orig_a,2),'.-')
-
+xlabel('mean SNR before /dB')
+ylabel('mean SNR improvement /dB')
 
 subplot(1,2,2)
 hold on
+title('log-spectrogram')
 plot(mean(snr_orig_loga,2),mean(snr_loga-snr_orig_loga,2),'.-')
+xlabel('mean SNR before /dB')
+ylabel('mean SNR improvement /dB')
 
+
+figure
+subplot(2,1,1)
+hold on
+title('waveform')
+plot(pesq_before,pesq_after-pesq_before)
+xlabel('PSEQ before')
+ylabel('PSEQ improvement')
+
+subplot(2,1,1)
+hold on
+plot(snr_orig_y,snr_y-snr_orig_y)
+xlabel('SNR before /dB')
+ylabel('SNR improvement /dB')
 
 [mean(snr_a-snr_orig_a,2)';
 mean(snr_loga-snr_orig_loga,2)']
+[pesq_before,pesq_after-pesq_before]
+[snr_orig_y,snr_y-snr_orig_y]
