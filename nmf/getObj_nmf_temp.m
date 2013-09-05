@@ -32,7 +32,7 @@ function [obj,dobj] = getObj_nmf_temp(logHW,A,vary,varargin)
 % INPUTS
 % logHW = vectorised matrices H and W [T*K+D*K,1]
 % A = data [T,D]
-% vary = observation noise [T,1]
+% vary = observation noise [T,D]
 % muinf = steady state mean of the IGMC priors [1,K]
 % varinf = steady state variance of the IGMC priors [1,K]
 % lam = steady state correlation-coefficient for successive
@@ -47,7 +47,7 @@ H = exp(logH);
 W = reshape(exp(logHW(K*T+1:end)),[K,D]);
 W = diag(1./sum(W,2))*W; %normalised weights
 
-Ahat = H*W+vary*ones(1,D);
+Ahat = H*W+vary;
 
 %%%
 
@@ -66,67 +66,69 @@ dobj1dlogw = temp(:);  %if unnormalised: dobj1dlogw = dobj1dW(:).*W(:);
 dobj1dlogh = dobj1dH(:).*H(:);
 
 %%%
-if nargin>3
+if nargin>5
 
   muinf = varargin{1};
   varinf = varargin{2};
   lam = varargin{3};
   
-alp1 = muinf.^2./varinf+2;
-bet1 = (alp1-1).*muinf;
+  alp1 = muinf.^2./varinf+2;
+  bet1 = (alp1-1).*muinf;
 
-alp = (2 + lam(:).^2 + muinf(:).^2./varinf(:))';
+  alp = (2 + lam(:).^2 + muinf(:).^2./varinf(:))';
 
-%a = alp+1;
-%b = [0,0]
+  %a = alp+1;
+  %b = [0,0]
 
-a = (alp-1).*lam;
-b = (alp-1).*(1-lam).*muinf;
-ahtpb = (ones(T-1,1)*a).*H(1:T-1,:)+ones(T-1,1)*b;
+  a = (alp-1).*lam;
+  b = (alp-1).*(1-lam).*muinf;
+  ahtpb = (ones(T-1,1)*a).*H(1:T-1,:)+ones(T-1,1)*b;
+  
+  obj2 = sum(bet1./H(1,:))+sum((alp1+1).*logH(1,:)) ...
+	 - alp*sum(log(ahtpb),1)' ...
+	 + (alp+1)*sum(logH(2:T,:),1)' ...
+	 + sum(sum(ahtpb./H(2:T,:),1),2);
+  
+  
+  dobj2dH = zeros(T,K);
+  
+  dobj2dH(1,:) = a./H(2,:)-bet1./H(1,:).^2+(alp1+1)./H(1,:)-alp.*a./ahtpb(1,:);
+  
+  dobj2dH(2:T-1,:) = (ones(T-2,1)*a)./H(3:T,:)-ahtpb(1:T-2,:)./H(2:T-1,:).^2 ...
+      + (ones(T-2,1)*(alp+1))./H(2:T-1,:) ...
+      -(ones(T-2,1)*(alp.*a))./ahtpb(2:T-1,:);
+  
+  dobj2dH(T,:) = -ahtpb(T-1,:)./H(T,:).^2 + (1+alp)./H(T,:);
 
-obj2 = sum(bet1./H(1,:))+sum((alp1+1).*logH(1,:)) ...
-       - alp*sum(log(ahtpb),1)' ...
-       + (alp+1)*sum(log(H(2:T,:)),1)' ...
-       + sum(sum(ahtpb./H(2:T,:),1),2);
+  dobj2dlogh = dobj2dH(:).*H(:);
+  
 
+  obj = (obj1+obj2)/T;
+  dobj = [dobj1dlogh+dobj2dlogh;dobj1dlogw]/T;
 
-dobj2dH = zeros(T,K);
+elseif nargin>3
+    
+   varinf = varargin{1};
+   lam = varargin{2};
+  
+  obj2 = ((1+lam.^2)./(2*varinf))*sum(H(2:T-1,:).^2)' ...
+         + (1./(2*varinf))*(H(T,:).^2)' +  (lam.^2./(2*varinf))*(H(1,:).^2)' ...
+	 -(lam./varinf)*sum(H(2:T,:).*H(1:T-1,:),1)';  
+  
+  dobj2dH = zeros(T,K);
+  
+  dobj2dH(1,:) = (lam.^2./varinf).*H(1,:) - (lam./varinf).*H(2,:);
+  
+  dobj2dH(2:T-1,:) = ones(T-2,1)*((1+lam.^2)./varinf).*H(2:T-1,:) ...
+                     - ones(T-2,1)*(lam./varinf).*(H(3:T,:)+H(1:T-2,:));
+  
+  dobj2dH(T,:) = 1./varinf.*H(T,:) -  (lam./varinf).*H(T-1,:);
 
-dobj2dH(1,:) = a./H(2,:)-bet1./H(1,:).^2+(alp1+1)./H(1,:)-alp.*a./ahtpb(1,:);
+  dobj2dlogh = dobj2dH(:).*H(:);
+  
 
-dobj2dH(2:T-1,:) = (ones(T-2,1)*a)./H(3:T,:)-ahtpb(1:T-2,:)./H(2:T-1,:).^2 ...
-                   + (ones(T-2,1)*(alp+1))./H(2:T-1,:) ...
-                   -(ones(T-2,1)*(alp.*a))./ahtpb(2:T-1,:);
-
-dobj2dH(T,:) = -ahtpb(T-1,:)./H(T,:).^2 + (1+alp)./H(T,:);
-
-dobj2dlogh = dobj2dH(:).*H(:);
-
-% keyboard
-% % should give the same result as the above when a = alp+1, b = 0;
-% alp = alp(1);
-% bet1 = bet1(1);
-% alp1 = alp1(1);
-
-% obj2b = (alp+1)*sum(sum(H(1:T-1,:)./H(2:T,:)))+sum(sum(logH(2:T,:))) ...
-%        -alp*sum(logH(1,:)-logH(T,:))+bet1*sum(1./H(1,:)) ... 
-%        +(alp1+1)*sum(logH(1,:))-K*(T-1)*alp*log(alp+1);
-
-% [obj2,obj2b]
-
-% dobj2dHb = zeros(T,K);
-% dobj2dHb(1,:) = (alp+1)./H(2,:)-bet1./H(1,:).^2+(alp1+1-alp)./H(1,:);
-% dobj2dHb(2:T-1,:) = (alp+1)./H(3:T,:)-(alp+1)*H(1:T-2,:)./H(2:T-1,:).^2 ...
-%                    + 1./H(2:T-1,:);
-% dobj2dHb(T,:) = -(alp+1)*H(T-1,:)./H(T,:).^2 + (1+alp)./H(T,:);
-
-% dobj2dloghb = dobj2dHb(:).*H(:);
-
-% keyboard
-%%%
-
-obj = (obj1+obj2)/T;
-dobj = [dobj1dlogh+dobj2dlogh;dobj1dlogw]/T;
+  obj = (obj1+obj2)/T;
+  dobj = [dobj1dlogh+dobj2dlogh;dobj1dlogw]/T;
 
 else
   obj = (obj1)/T;
