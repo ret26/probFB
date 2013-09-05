@@ -7,16 +7,23 @@ function [W,H,info] = nmf(A,W,H,muinf,varinf,lam,vary,varargin)
 % and the temporal and spectral basis function are learned in a joint
 % optimisation.
 %
+% The cost function used in the likelihood is:
+% \sum_{d,t} A_{d,t}./Ahat_{t,d} + \sum_{d,t} \log(Ahat_{t,d}) 
+%
 % If you want to run normal NMF with no temporal priors set 
 % muinf = [], varinf = [], lam = []
 %
 % The NMF variant used has (optional) temporal constraints (K = number
 % of basis functions can be under/over/complete).
-% 
-% The cost function used in the likelihood is:
-% \sum_{d,t} A_{d,t}./Ahat_{t,d} + \sum_{d,t} \log(Ahat_{t,d}) 
 %
-% Uses Inverse Gamma Markov chain priors on the temporal basis functions:
+% If you want to run tNMF with truncated normal temporal priors set 
+% muinf = [], varinf = x, lam = y
+%
+% If you want to run tNMF with inverse gamma temporal priors set 
+% muinf = x, varinf = y, lam = z, i.e. no empty matrices
+% 
+% Inverse Gamma Markov chain priors on the temporal basis functions
+% are as follows:
 % h_{k,1} ~ IG(alp1,bet1)
 % h_{k,t}|h_{k,t-1} ~ IG(alp_{k},bet_{k,t})
 % alp_k = 2+lam_k^2+muinf_k^2/varinf_k
@@ -40,7 +47,7 @@ function [W,H,info] = nmf(A,W,H,muinf,varinf,lam,vary,varargin)
 %   varinf = steady state variance of the IGMC priors [1,K]
 %   lam = steady state correlation-coefficient for successive
 %       variables in the IGMC priors [1,K]
-%   vary = observation noise [T,1] (set to zero if signal is noiseless)
+%   vary = observation noise [T,D] (set to zero if signal is noiseless)
 %
 % Optional algorithmic options:
 % numIts = number of iterations per optimisation batch
@@ -62,7 +69,7 @@ end
 if nargin>7 & isfield(varargin{1},'progress_chunk')
   progress_chunk = varargin{1}.progress_chunk;
 else
-  progress_chunk = 50;
+  progress_chunk = 1000;
 end
 
 [K,D] = size(W);
@@ -76,19 +83,23 @@ if nargin>7 & isfield(varargin{1},'restarts')
   Htest = H;
   ObjBest = inf;
   disp(['---- using ',num2str(restarts),' restarts ----'])
-  Opts.numIts = 50;
+  Opts.numIts = 1000;
   
   for r=1:restarts
-    [Wtest,Htest,info] = nmf(A,Wtest,Htest,muinf,varinf,lam,vary,Opts);
-     
-    if info.Obj(end)<ObjBest
+%    [Wtest,Htest,info] =
+%    nmf(A,Wtest,Htest,muinf,varinf,lam,vary,Opts);
+     [Htest,info] = nmf_inf(A,Wtest,Htest,muinf,varinf,lam,vary,Opts);
+
+   if info.Obj(end)<ObjBest
       W = Wtest;
       H = Htest;
       ObjBest = info.Obj(end);
     end
-     Wtest = exp(randn(K,D))/1;
-     Htest = exp(randn(T,K))/1;
+    ks = ceil(T*rand(K,1));
+    Wtest = A(ks,:);%exp(randn(K,D))/1;
+    Htest = exp(randn(T,K))/1;
   end
+ 
 end
 
 L = ceil(numIts/progress_chunk);
@@ -106,12 +117,16 @@ for l=1:L
   
   % run conjugate gradient update
   tic;
-  if isempty(muinf)
+  if isempty(varinf)
     % normal NMF
     [logHW, ObjCur, itCur] = minimize(logHW,'getObj_nmf_temp', ...
 				      numIts(l),A,vary);
+  elseif isempty(muinf)
+    % temporal NMF truncated Gaussian
+    [logHW, ObjCur, itCur] = minimize(logHW,'getObj_nmf_temp', ...
+				      numIts(l),A,vary,varinf,lam);
   else
-    % temporal NMF
+    % temporal NMF inverse Gamma
     [logHW, ObjCur, itCur] = minimize(logHW,'getObj_nmf_temp', ...
 				      numIts(l),A, vary,muinf,varinf,lam);
   end
