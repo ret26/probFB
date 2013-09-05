@@ -128,7 +128,7 @@ fac = 4; % initialise the time-scales of the modulation using fac/channel-centre
 % DS = 2; 
 % fac = 2;
 % D = 20; % number channels (don't set too high)
-% K = 3;
+% K = 10;
 
 % File = '89 - Fire'; % Name of file to load
 % fs = 44100;
@@ -194,7 +194,11 @@ ySampNoise = samplePFB(Lam1,Var1,om,0,T);
 vary = 0;
 Z = probFB(y,Lam1,Var1,om,vary); % applies filters to the signal, replaced AR2 filter bank (much faster)
 
+<<<<<<< HEAD
+keyboard
+=======
 %keyboard
+>>>>>>> 6e79789c057b1f781717bef054899692315ece7b
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Demodulation
@@ -315,9 +319,16 @@ else
   imagesc(ParamsSFA.G)
 end
 
-opts.numIts = 50;
+optsCG.numIts = 50;
+optsCG.progress_chunk = 5;
+
+opts.numIts = 200;
 opts.progress_chunk = 5;
-[X1FT,X2FT,ParamsFT] = mPAD_train_G(y,X2,Params,opts);
+%[X1FT,X2FT,ParamsFT] = mPAD_train_G(y,X2,Params,opts);
+
+Z2Init = ones(size(X2))*0;
+[X1,X2,Info] = mPAD_infer_X1X2_basis_func(y,Z2Init,Params,optsCG);
+[X1FT,X2FT,ParamsFT] = mPAD_train_G_basis_func(y,Info.Z2,Params,opts);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Synthesis
@@ -347,7 +358,15 @@ Dims = packDimsMPAD(D,K,TSamp); % Dimensionality of the sampled signal
 
 y = y/sqrt(var(y));
 ySampFT = ySampFT/sqrt(var(ySampFT));
-compareStatistics(y,ySampFT,C',X1SampFT,X2,X2SampFT,A',ASampFT,fs)
+
+statistics1 = get_statistics(y);
+statistics2 = get_statistics(ySampFT);
+statistics3 = get_statistics(ySampSFA);
+
+plot_statistics(statistics1,statistics3);
+plot_statistics(statistics1,statistics2);
+
+%compareStatistics(y,ySampFT,C',X1SampFT,X2,X2SampFT,A',ASampFT,fs)
 
 figure
 hold on
@@ -358,7 +377,7 @@ plot(ASampFT(:,10),'-r')
 % SAVE
 savePath = [saveDir,File(1:2),'/'];
 
-baseName = [File(1:2),'_D',num2str(D),'_LrnLen_synth_KyriacosTest_'];
+baseName = [File(1:2),'_D',num2str(D),'_LrnLen_synth_basis_func_'];
 
 name1 = [baseName,typ];
 wavwrite(0.95*ySampFT/max(abs(ySampFT)),fs,[savePath,name1,'.wav']);
