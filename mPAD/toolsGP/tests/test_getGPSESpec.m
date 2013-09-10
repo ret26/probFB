@@ -4,6 +4,59 @@ function test_suite =  test_getGPSESpec
 % test 
 % function fftCov = getGPSESpec(len,T);
 
+function test_correctSpectrum
+
+dispFigs=1;
+randn('state',1)
+var = 1.5;
+len = 5.32;
+
+T = 1000;
+
+fftCov1 = var*getGPSESpec(len,T);
+
+
+
+dts = [0:T/2,[T/2-1:-1:1]]';
+autoCor = var*exp(-1/(2*len^2)*(dts).^2);
+fftCov2 = fft(autoCor);
+
+if dispFigs==1
+  figure;
+  hold on
+  plot(abs(fftCov2),'-k','linewidth',2)
+  plot(fftCov1,'-r','linewidth',1)
+end
+
+tol = 1e-5;
+assertVectorsAlmostEqual(fftCov1,fftCov2,'absolute',tol,0)
+
+function test_correctDerivatives
+
+dispFigs=1;
+randn('state',1)
+var = 1.5;
+len = 5.32;
+
+T = 1001;
+
+[fftCov1,dfftCov1] = getGPSESpec(len,T);
+delta = 1e-6;
+fftCov2 = getGPSESpec(len+delta,T);
+
+dfftCov2 = (fftCov2-fftCov1)/delta;
+
+
+if dispFigs==1
+  figure;
+  hold on
+  plot(dfftCov2,'-k','linewidth',2)
+  plot(dfftCov1,'-r','linewidth',1)
+end
+
+tol = 1e-1;
+assertVectorsAlmostEqual(dfftCov1,dfftCov2,'absolute',tol,0)
+
 function test_correctAutoCorrelation
 
 dispFigs=1;
@@ -31,6 +84,7 @@ end
 
 tol = 1e-5;
 assertVectorsAlmostEqual(autoCor1,autoCor2,'absolute',tol,0)
+
 
 
 function test_correctAutoCorrelation_2D
