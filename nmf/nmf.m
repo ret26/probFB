@@ -86,8 +86,7 @@ if nargin>7 & isfield(varargin{1},'restarts')
   Opts.numIts = 1000;
   
   for r=1:restarts
-%    [Wtest,Htest,info] =
-%    nmf(A,Wtest,Htest,muinf,varinf,lam,vary,Opts);
+%    this should be updated to use the fixed point algorithm for initialisation
      [Htest,info] = nmf_inf(A,Wtest,Htest,muinf,varinf,lam,vary,Opts);
 
    if info.Obj(end)<ObjBest
