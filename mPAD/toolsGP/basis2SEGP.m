@@ -15,7 +15,7 @@ function Y = basis2SEGP(Z,lenx,varx,tol)
 % OUTPUTS
 % Y = Gaussian process [T,K]
 
-K = length(lenx);
+[T,K] = size(Z);
 Y = zeros(T,K);
 
 for k=1:K

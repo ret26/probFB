@@ -137,6 +137,8 @@ for l=1:L
   H = exp(logH);
   W = reshape(exp(logHW(K*T+1:end)),[K,D]);
   W = diag(1./sum(W,2))*W;
+  Ahat = H*W;
+  snrChan = 10*log10(mean(A.^2,1))-10*log10(mean((A-Ahat).^2));
   
   % Store objective and iteration information
   Obj = [Obj;ObjCur];
@@ -158,10 +160,12 @@ for l=1:L
   str5 = ['total time ',num2str(ceil(sum(tim)/6)/10),'mins'];
   str6 = ['dH ',num2str(round(dH*1000)/10),'%%'];
   str7 = ['dW ',num2str(round(dW*1000)/10),'%%'];
+  str8 = ['A snr ',num2str(round(mean(snrChan)*1000)/1000)];
+
 
   str_space = '   ';
   
-  fprintf(['\n',str1,str_space,str2,str_space,str3,str_space,str4,str_space,str5,str_space,str6,str_space,str7,str_space])
+  fprintf(['\n',str1,str_space,str2,str_space,str3,str_space,str4,str_space,str5,str_space,str6,str_space,str7,str_space,str8,str_space])
 
 end
 

@@ -22,6 +22,8 @@ function [obj,dobj] = getObj_fitSE_basis_func(z,x,lenx,varx,tol)
 %%%%%%
 % form envelopes from basis functions
 
+T = length(z);
+
 tau = ceil(lenx/sqrt(2)*tol);
 bh = sqrt(varx*sqrt(2)/(lenx*sqrt(pi))); % basis function height to
                                          % get correct variance
@@ -35,3 +37,7 @@ obj = 1/2*sum(dx.^2)+1/2*sum(z.^2);
 
 % derivatives
 dobj = conv(dx,bas,'same')+z;
+
+
+obj = obj/T;
+dobj = dobj/T;

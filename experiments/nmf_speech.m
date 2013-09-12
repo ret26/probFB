@@ -56,7 +56,7 @@ if trainFilter==1
 
   %ySampNoise = samplePFB(Lam1,Var1,om,0,T);
 else
-  dfFrac = 1/10;
+  dfFrac = 1/15;
   fmax = logspace(log10(1/50),log10(0.3),D)';
   [om,Lam1,Var1] = freq2probSpec(fmax,fmax*dfFrac,ones(D,1)/D);
 end
@@ -76,17 +76,18 @@ ATrain = abs(ZTrain').^2;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Train the model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-K = 20;  % number of features
+K = D;  % number of features
 
-WInit = exp(randn(K,D));
+HInit = exp(randn(T,K));
 ks = ceil(T*rand(K,1));
-WInit = A(ks,:);
+WInit = ATrain(ks,:);
 vary = zeros(T,D);
 
 % initialise with regular NMF
-Opts.restarts = 10;
-Opts.numIts = 20000;
-[WEst1,HEst1,info1] = nmf(ATrain,WInit,HInit,[],[],[],vary,Opts);
+Opts.restarts = 50;
+Opts.numIts = 5000;
+%[WEst1,HEst1,info1] = nmf(ATrain,WInit,HInit,[],[],[],vary,Opts);
+[WEst1,HEst1,info1] = nmf_fp(ATrain,WInit,HInit,vary,Opts);
 
 % order according to slowness (mean square derivative)
 fastness = mean(diff(HEst1).^2)./var(HEst1);
@@ -94,39 +95,55 @@ fastness = mean(diff(HEst1).^2)./var(HEst1);
 HEst1 = HEst1(:,ind); 
 WEst1 = WEst1(ind,:);
 
-%%% Things tried for the IG version of the temporal priors -- failed
-% % % set prior parameters (hacky as boot-strapping from data) 
-% % muinf = mean(HEst1);
-% % varinf = var(HEst1);
-% lam = mean((HEst1(1:T-1,:)-ones(T-1,1)*muinf).*(HEst1(2:T,:)-ones(T-1,1)*muinf))./var(HEst1);
 
-% Versions where we set the means and the variances from the data
-% mean and variance -- the moment matching initialisation
-% muinf = (mean(ATrain)*sum(WEst1,1)'/sum(sum(WEst1,1).^2))*ones(1,K);
-% varinf = (var(ATrain)*sum(WEst1.^2,1)'/sum(sum(WEst1.^2,1).^2))*ones(1,K);
+% % TRUNCATED GAUSSIAN PRIORS
+% % trying truncated Gaussian temporal priors instead
 
-% %muinf = mean(ATrain,1)*WEst1'/(WEst1*WEst1');
-% %WEst1sq = WEst1.^2;
-% %varinf = var(ATrain,1)*WEst1sq'/(WEst1sq*WEst1sq');
+% % set lam from the correlation between successive hs
+% muinf = mean(HEst1);
+% varinf = var(HEst1);
+% lam = mean((HEst1(1:T-1,:)-ones(T-1,1)*muinf).*(HEst1(2:T,:)- ones(T-1,1)*muinf))./var(HEst1);
 
-% lam = zeros(1,K);
-% Opts.numIts = 5000;
+% Opts.numIts = 20000;
 % Opts.restarts = 1;
-% [WEst2,HEst2,info2] = nmf(ATrain,WEst1,HEst1,muinf,varinf,lam,vary,Opts);
+% [WEst2,HEst2,info2] = nmf(ATrain,WEst1,HEst1,[],varinf,lam,vary,Opts);
+% %[WEst2,HEst2,info2] = nmf(ATrain,WEst2,HEst2,[],varinf,lam,vary,Opts);
 
-% trying truncated Gaussian temporal priors instead
-lam = zeros(1,K);
+%% LOG-NORMAL SE GAUSSIAN PROCESS TEMPORAL NMF
+% initialise
 
-% set lam from the correlation between successive hs
-muinf = mean(HEst1);
-varinf = var(HEst1);
-lam = mean((HEst1(1:T-1,:)-ones(T-1,1)*muinf).*(HEst1(2:T,:)- ones(T-1,1)*muinf))./var(HEst1);
+lenx = zeros(K,1);
+mux = zeros(K,1);
+varx = zeros(K,1);
 
+for k=1:K
+  % threshold
+  logHthresh = log(HEst1(:,k)+1e-8);
+  
+  % filter
+  filt = exp(-1/2*([-100:100].^2)/(1^2));
+  filt = filt/sum(filt);
+  logHsm = conv(logHthresh,filt,'same');
+  
+  % fit GP
+  mux(k) = mean(logHsm);
+  [lenx(k),varx(k),info] = trainSEGP_RS(logHsm-mux(k));
+  
+%  figure
+%  hold on
+%  plot(logHthresh,'-b')
+%  plot(logHsm,'-k')
+%  keyboard
+end
 
-Opts.numIts = 20000;
-Opts.restarts = 1;
-[WEst2,HEst2,info2] = nmf(ATrain,WEst1,HEst1,[],varinf,lam,vary,Opts);
-%[WEst2,HEst2,info2] = nmf(ATrain,WEst2,HEst2,[],varinf,lam,vary,Opts);
+disp(['length scale parameters'])
+lenx
+
+Opts.numIts = 200;
+[HEst2,info2] = tnmf_inf(ATrain,WEst1,HEst1+1e-8,lenx,mux,varx,vary,Opts);
+
+Opts.numIts = 2000;
+[WEst2,HEst2,info2] = tnmf(ATrain,WEst1,HEst2,lenx,mux,varx,vary,Opts);
 
 % PLOT RESULTS
 figure
@@ -212,8 +229,13 @@ T = length(yTest);
 ZTest = probFB(yTest,Lam1,Var1,om,0); 
 ATest = abs(ZTest').^2;
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Denoising
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 L = 3;
-varys = [logspace(log10(1e-3),log10(10),L)];
+varys = [logspace(log10(1e-1),log10(40),L)];
 
 %L=1;
 %varys = 1;
@@ -233,8 +255,9 @@ snr_y = zeros(L,1);
 pesq_before = zeros(L,1);
 pesq_after = zeros(L,1);
 
-opts_inf.numIts = 10000;
-opts_inf.progress_chunk = 500;
+
+opts_inf.numIts = 1000;
+opts_inf.progress_chunk = 100;
 %opts_inf.restarts = 0;
 
 for l=1:L
@@ -254,8 +277,20 @@ for l=1:L
   varyCur = ones(T,1)*var(filt_noise');
   
   % denoise using NMF
-%  [HTest,info] = nmf_inf(ANoisy,WEst2,HInit,[],[],[],varyCur,opts_inf);
-  [HTest,info] = nmf_inf(ANoisy,WEst2,HInit,[],varinf,lam,varyCur,opts_inf);
+%  [HTest,info] =
+%  nmf_inf(ANoisy,WEst2,HInit,[],[],[],varyCur,opts_inf);
+
+
+%  [HTest_fp,infoInit] = nmf_inf_fp(ANoisy,WEst2,HInit,varyCur);
+%  [HTest,info] = tnmf_inf(ANoisy,WEst2,HTest_fp+1e-9,lenx,mux,varx,varyCur,opts_inf);
+
+[HTest,info] = tnmf_inf(ANoisy,WEst2,HInit,lenx,mux,varx,varyCur,opts_inf);
+
+% truncated Gaussian 
+%  [HTest_fp,infoInit] = nmf_inf_fp(ANoisy,WEst2,HInit,varyCur);
+%  [HTest,info] = nmf_inf(ANoisy,WEst2,HTest_fp,[],varinf,lam,varyCur,opts_inf);
+
+
   ADenoise = HTest*WEst2;
   
   % figure out the amount NMF has denoised the spectrogram by
@@ -283,15 +318,15 @@ for l=1:L
   pesq_after(l) = pesq(yTest, yDenoise, fs);
 
   
-  % figure
-  % subplot(3,1,1)
-  % imagesc(log(ATest)')
+  figure
+  subplot(3,1,1)
+  imagesc(log(ATest)')
   
-  % subplot(3,1,2)
-  % imagesc(log(ADenoise)')
+  subplot(3,1,2)
+  imagesc(log(ADenoise)')
   
-  % subplot(3,1,3)
-  % imagesc(log(ANoisy)')
+  subplot(3,1,3)
+  imagesc(log(ANoisy)')
 %  keyboard
 end
 
@@ -315,13 +350,13 @@ figure
 subplot(2,1,1)
 hold on
 title('waveform')
-plot(pesq_before,pesq_after-pesq_before)
+plot(pesq_before,pesq_after-pesq_before,'.-')
 xlabel('PSEQ before')
 ylabel('PSEQ improvement')
 
-subplot(2,1,1)
+subplot(2,1,2)
 hold on
-plot(snr_orig_y,snr_y-snr_orig_y)
+plot(snr_orig_y,snr_y-snr_orig_y,'.-')
 xlabel('SNR before /dB')
 ylabel('SNR improvement /dB')
 
@@ -329,3 +364,127 @@ ylabel('SNR improvement /dB')
 mean(snr_loga-snr_orig_loga,2)']
 [pesq_before,pesq_after-pesq_before]
 [snr_orig_y,snr_y-snr_orig_y]
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% GAP RESTORATION
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% L = 3;
+% gapLim = [5,100];
+% NGaps = 20;
+% gaps = ceil(logspace(log10(gapLim(1)),log10(gapLim(2)),L));
+% gapPos = gapLim(2)+ceil(rand(NGaps,1)*(T-2*gapLim(2)));
+  
+% HInit = exp(randn(T,K))/10000;
+
+% recon_mse_a = zeros(L,1);
+% recon_mse_loga = zeros(L,1);
+% recon_mse_orig_a = zeros(L,1);
+% recon_mse_orig_loga = zeros(L,1);
+% recon_snr_orig_a = zeros(L,D);
+% recon_snr_a = zeros(L,D);
+% recon_snr_orig_loga = zeros(L,D);
+% recon_snr_loga = zeros(L,D);
+% recon_snr_orig_y = zeros(L,1);
+% recon_snr_y = zeros(L,1);
+% recon_pesq_before = zeros(L,1);
+% recon_pesq_after = zeros(L,1);
+
+% opts_inf.numIts = 1000;
+% opts_inf.progress_chunk = 100;
+
+% for l=1:L
+%   yGap = yTest;
+%   varyCur = zeros(T,D);
+%   ind = [];
+%   for ng=1:NGaps
+%     ind = [ind,gapPos(ng)+[-ceil(gaps(l)/2):+ceil(gaps(l)/2)]];
+%   end
+  
+%   yGap(ind) = 0;
+%   varyCur(ind,:) = 1e5;
+  
+%   ZGap = probFB(yGap,Lam1,Var1,om,0); 
+%   AGap = abs(ZGap').^2;
+
+%   % inference
+%   [HRecon,info] = tnmf_inf(AGap,WEst2,HInit,lenx,mux,varx,varyCur,opts_inf);
+
+%   ARecon = HRecon*WEst2;
+  
+%   % figure out the amount NMF has denoised the spectrogram by
+%   recon_mse_orig_a(l) = mean(mean((ATest(ind,:)-AGap(ind,:)).^2));
+%   recon_mse_orig_loga(l) = mean(mean((log(ATest(ind,:))-log(AGap(ind,:))).^2));
+%   recon_mse_a(l) = mean(mean((ATest(ind,:)-ARecon(ind,:)).^2));
+%   recon_mse_loga(l) = mean(mean((log(ATest(ind,:))-log(ARecon(ind,:))).^2));
+
+%   recon_snr_orig_a(l,:) = 10*(log10(sum(ATest(ind,:).^2))-log10(sum((ATest(ind,:)-AGap(ind,:)).^2)));
+%   recon_snr_orig_loga(l,:) = 10*(log10(sum(log(ATest(ind,:)).^2))-log10(sum((log(ATest(ind,:))-log(AGap(ind,:))).^2)));
+%   recon_snr_a(l,:) = 10*(log10(sum(ATest(ind,:).^2))-log10(sum((ATest(ind,:)-ARecon(ind,:)).^2)));
+%   recon_snr_loga(l,:) = 10*(log10(sum(log(ATest(ind,:)).^2))-log10(sum((log(ATest(ind,:))-log(ARecon(ind,:))).^2)));
+
+%   % reconstruction of the signal via least squares
+%   spec = get_probFB_spec(Lam1,Var1,om,0,T);
+%   lamRec = 0; varyRec = (1-lamRec^2);
+%   yInit = randn(T,1)/1000;
+%   [yRecon,aRec,info3] = recon_FB_mag(yInit,ARecon.^0.5,spec,[],lamRec,varyRec);
+
+%   % evaluate SNR and perceptual improvement
+%   recon_snr_orig_y(l) = 10*(log10(sum(yTest(ind).^2))-log10(sum((yTest(ind)-yGap(ind)).^2)));
+%   recon_snr_y(l) = 10*(log10(sum(yTest(ind).^2))-log10(sum((yTest(ind)-yRecon(ind)).^2)));
+
+%   recon_pesq_before(l) = pesq(yTest, yGap, fs);
+%   recon_pesq_after(l) = pesq(yTest, yRecon, fs);
+
+  
+%   figure
+%   subplot(3,1,1)
+%   imagesc(log(ATest)')
+  
+%   subplot(3,1,2)
+%   imagesc(log(ARecon)')
+  
+%   subplot(3,1,3)
+%   imagesc(log(AGap)')
+%   keyboard
+
+% end
+
+
+
+% figure
+% subplot(1,2,1)
+% hold on
+% title('spectrogram')
+% plot(mean(recon_snr_orig_a,2),mean(recon_snr_a-recon_snr_orig_a,2),'.-')
+% xlabel('mean SNR before /dB')
+% ylabel('mean SNR improvement /dB')
+
+% subplot(1,2,2)
+% hold on
+% title('log-spectrogram')
+% plot(mean(recon_snr_orig_loga,2),mean(recon_snr_loga-recon_snr_orig_loga,2),'.-')
+% xlabel('mean SNR before /dB')
+% ylabel('mean SNR improvement /dB')
+
+
+% figure
+% subplot(2,1,1)
+% hold on
+% title('waveform')
+% plot(recon_pesq_before,recon_pesq_after-recon_pesq_before,'.-')
+% xlabel('PSEQ before')
+% ylabel('PSEQ improvement')
+
+% subplot(2,1,2)
+% hold on
+% plot(recon_snr_orig_y,recon_snr_y-recon_snr_orig_y,'.-')
+% xlabel('SNR before /dB')
+% ylabel('SNR improvement /dB')
+
+% [mean(recon_snr_a-recon_snr_orig_a,2)';
+% mean(recon_snr_loga-recon_snr_orig_loga,2)']
+% [recon_pesq_before,recon_pesq_after-pesq_before]
+% [recon_snr_orig_y,recon_snr_y-recon_snr_orig_y]
+
