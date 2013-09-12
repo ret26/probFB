@@ -61,6 +61,13 @@ for k=1:K
   % convert from 
   logH = log(H(:,k))-mux(k);
   [X(:,k),infoTrans] = fitSEGP_BF(logH,lenx(k),varx(k));
+
+  % logHfit = basis2SEGP(X(:,k),lenx(k),varx(k),9);
+  % figure
+  % hold on
+  % plot(logH,'-k')
+  % plot(logHfit,'-b')
+  % keyboard
 end
 
 L = ceil(numIts/progress_chunk);
@@ -101,6 +108,9 @@ for l=1:L
   it = [it;itCur];
   tim = [tim;timCur];
   dH = sqrt(sum((H(:)-Hold(:)).^2)/sum(H(:).^2));
+
+  Ahat = H*W;
+  snrChan = 10*log10(mean(A.^2,1))-10*log10(mean((A-Ahat).^2));
   
   % Display some information to the user
   str1 = ['Progress ',num2str(l),'/',num2str(L),];
@@ -114,10 +124,11 @@ for l=1:L
   str4 = ['time ',num2str(ceil(timCur/6)/10),'mins'];
   str5 = ['total time ',num2str(ceil(sum(tim)/6)/10),'mins'];
   str6 = ['dH ',num2str(round(dH*1000)/10),'%%'];
+  str7 = ['A snr ',num2str(round(mean(snrChan)*1000)/1000)];
 
   str_space = '   ';
   
-  fprintf(['\n',str1,str_space,str2,str_space,str3,str_space,str4,str_space,str5,str_space,str6,str_space])
+  fprintf(['\n',str1,str_space,str2,str_space,str3,str_space,str4,str_space,str5,str_space,str6,str_space,str7])
 
 end
 
