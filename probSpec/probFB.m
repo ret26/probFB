@@ -62,7 +62,7 @@ else
 
   % Output
   [Z,covZ] = getFBLDSOutput(Xfin,Pfin);
-
+  
 end
 
 if nargout==2

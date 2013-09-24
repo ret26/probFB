@@ -63,7 +63,7 @@ for k=1:K
   logH = log(H(:,k))-mux(k);
   [X(:,k),infoTrans] = fitSEGP_BF(logH,lenx(k),varx(k));
 
-  logHfit = basis2SEGP(X(:,k),lenx(k),varx(k),9);
+  % logHfit = basis2SEGP(X(:,k),lenx(k),varx(k),9);
   % figure
   % hold on
   % plot(logH,'-k')
@@ -142,3 +142,4 @@ fprintf('\n')
 % Save information about the optimisation
 info.Obj = Obj;
 info.it = it;
+info.tim = tim;
