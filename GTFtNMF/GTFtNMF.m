@@ -41,8 +41,8 @@ function [W,H,mnV,covV,info] = GTFtNMF(y,W,H,lamv,varv,omv,vary,lenx,mux,varx,va
 %   numIts = number of iterations for each M-Step [numEMIts,1]
 %
 % OUTPUTS
-% W = initial spectral weight vector [K,D]
-% H = initial temporal basis functions
+% W = learned spectral weight vector [K,D]
+% H = learned temporal basis functions
 % mnV = posterior mean over the 
 % covV =
 % info = structure containing information about the optimisation including
