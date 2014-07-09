@@ -100,6 +100,9 @@ lik = [];
 z = Z(:);
 Obj = []; itTot = []; tim = []; lik = [];
 
+%disp('stopped in GTFtNMF_inf for debugging purposes')
+%keyboard
+
 for it=1:L
   
   % save old parameters
@@ -111,9 +114,14 @@ for it=1:L
   % run conjugate gradient update
   tic;
 
-  [z, ObjCur, itCur] = minimize(z,'getObj_GTFtNMF_FB_hier_inf', ...
+  % [z, ObjCur, itCur] = minimize(z,'getObj_GTFtNMF_FB_hier_inf', ...
+  % 				    numIts(it),W,y,lamv,varv,omv, ...
+  % 				    vary,lenx,mux,varx,1,tol);
+
+  [z, ObjCur, itCur] = minimize(z,'getObj_GTFtNMF_FB_prod_inf', ...
 				    numIts(it),W,y,lamv,varv,omv, ...
 				    vary,lenx,mux,varx,1,tol);
+
   timCur = toc;
   
   % Pull out H from z
