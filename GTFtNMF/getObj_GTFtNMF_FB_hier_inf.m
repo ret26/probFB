@@ -51,6 +51,10 @@ function [Obj,dObj] = getObj_GTFtNMF_FB_hier_inf(z,W,y,lamv,varv,omv, ...
   T = length(y);  
   K = length(lenx);
   
+  if length(vary)==1
+      vary = vary*ones(T,1);
+  end
+  
   % form the temporal basis functions
   Z = reshape(z(1:T*K),[T,K]);
 
@@ -97,7 +101,8 @@ function [Obj,dObj] = getObj_GTFtNMF_FB_hier_inf(z,W,y,lamv,varv,omv, ...
   end
   
 %  dAdX = 1./(1+exp(-X2(1:T,:)*G'-ones(T,1)*Mu2'));
-  dY = 1/(4*vary)*(sum(X1X1,3)-(y*ones(1,D)).*X1)./A.^2; %*W).*H;
+
+  dY = 1./(4*vary*ones(1,D)).*(sum(X1X1,3)-(y*ones(1,D)).*X1)./A.^2; %*W).*H;
   dX = (dY*W').*H;
   
   dObjAdZ = zeros(T,K);

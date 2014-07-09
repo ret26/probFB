@@ -42,7 +42,6 @@ function  [lik,Xfin,Pfin] = kalman_GTFtNMF_FB_hier(y,Amp,lamx,varx,omx,vary,vara
 % lik = likelihood
 % X1 = posterior means of the filter coefficients, size [N,K,T]
 % X1X1 = posterior covariance of the filter coefficients, size [K,K,T]
-%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Massage parameters into Kalman form
@@ -135,28 +134,33 @@ for t=1:T,
     fprintf(['Progress ',num2str(floor(50*t/T)),'%%','\r'])
   end
 
-  if (K<D)
-    temp1= R\C;%  rdiv(C,R);
-    temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
-    temp3=C'*temp2;
-   % temp4=inv(I+temp3)*temp1';
-    temp4=(I+temp3)\temp1';
+  % if (K<D)
+  %   temp1= R\C;%  rdiv(C,R);
+  %   temp2=temp1*Ppre(:,:,t); % inv(R)*C*Ppre
+  %   temp3=C'*temp2;
+  %  % temp4=inv(I+temp3)*temp1';
+  %   temp4=(I+temp3)\temp1';
 
-    invP=invR-temp2*temp4; 
-    CP= temp1' - temp3*temp4;    % C'*invP
-  else
+  %   invP=invR-temp2*temp4; 
+  %   CP= temp1' - temp3*temp4;    % C'*invP
+  % else
 %    temp1=diag(R)+C*Ppre(:,:,t)*C';
     temp1=R+C*Ppre(:,:,t)*C';
-    invP=inv(temp1);
-%    CP=C'*invP;
-    CP=C'/temp1;
-  end;
+    L = chol(temp1);
+%%    invP=inv(temp1);
+%%    CP=C'*invP;
+%    CP=C'/temp1;
+%  end;
 
-  Kcur=Ppre(:,:,t)*CP;
+%  Kcur=Ppre(:,:,t)*CP;
+  Kcur=((Ppre(:,:,t)*C')/L)/L';
   KC=Kcur*C;
   Ydiff=Y(:,:,t)-Xpre*C';
   Xcur(:,:,t)=Xpre+Ydiff*Kcur'; 
-  Pcur(:,:,t)=Ppre(:,:,t)-KC*Ppre(:,:,t);
+  % a more numerically stable version of:   Pcur(:,:,t)=Ppre(:,:,t)-KC*Ppre(:,:,t)
+  eye_KC = eye(K)-KC;
+  Pcur(:,:,t)=eye_KC*Ppre(:,:,t)*eye_KC'+Kcur*R*Kcur';
+%  keyboard
 
   if (t<T)
 
@@ -175,6 +179,13 @@ for t=1:T,
         
     Xpre=Xcur(:,:,t)*A';
     Ppre(:,:,t+1)=A*Pcur(:,:,t)*A'+Q;
+    
+    [LPpre,p] = chol(Ppre(:,:,t+1));
+    if p>0
+      disp('filtering')
+      keyboard  
+    end
+
   end;
 
   % calculate likelihood
@@ -187,8 +198,8 @@ for t=1:T,
   %   problem=1;
   % end;
 
-  logdetiP=sum(log(diag(chol(invP))));
-  lik=lik+N*logdetiP-0.5*sum(sum(Ydiff.*(Ydiff*invP)));
+  logdetiP=-sum(log(diag(L)));
+  lik=lik+N*logdetiP-0.5*sum(sum(Ydiff.*(Ydiff/L)/L'));
 
 end;  
 
@@ -215,13 +226,21 @@ for t=(T-1):-1:1
   
   %%%%%%%%
 
-  
-  J(:,:,t)=Pcur(:,:,t)*A'/Ppre(:,:,t+1);
+  [L,p] = chol(Ppre(:,:,t+1));  
+
+  if p>0
+    disp('smoothing')
+    keyboard
+  end
+%  J(:,:,t)=Pcur(:,:,t)*A'/Ppre(:,:,t+1);
+  J(:,:,t)=((Pcur(:,:,t)*A')/L)/L';
   Xfin(:,:,t)=Xcur(:,:,t)+(Xfin(:,:,t+1)-Xcur(:,:,t)*A')*J(:,:,t)';
   Pfin(:,:,t)=Pcur(:,:,t)+J(:,:,t)*(Pfin(:,:,t+1)-Ppre(:,:,t+1))*J(:,:,t)';
   
 end
 
+
 if verbose==1
   fprintf('                                        \r')
 end
+
