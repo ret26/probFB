@@ -89,6 +89,7 @@
   for d=1:D
     plot(ind-1,mVarHist(d,ind),'color',cols(d,:));
   end
+
   plot([ind(1)-1,ind(end)-1],min(minVar)*[1,1],'-k')
   set(gca,'yscale','log')
   ylabel('mVar')
