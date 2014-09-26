@@ -1,0 +1,4 @@
+# ignore temp files saved by emacs or matlab
+*.m~
+
+# add more ignores here!
