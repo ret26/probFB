@@ -1,4 +1,8 @@
 # ignore temp files saved by emacs or matlab
 *.m~
+*.asv # windows huh???
+
+# ignore compiled mex
+*.mex*
 
 # add more ignores here!
