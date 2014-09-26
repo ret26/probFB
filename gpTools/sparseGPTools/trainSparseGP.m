@@ -1,0 +1,4 @@
+function trainSparseGP
+
+    
+end
