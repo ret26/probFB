@@ -1,5 +1,5 @@
-function [mf, vf] = denoiseSparseGP(y,oriSpec,vary,M)
-    sparseSpec = getSparseGPSpec(oriSpec,M);
+function [mf, vf] = denoiseVFEFFT(y,oriSpec,vary,M)
+    sparseSpec = getVFEFFTSpec(oriSpec,M);
     specy = fft(y);
     T = length(y);
     mf = real(ifft(sparseSpec./(sparseSpec+vary).*specy));

@@ -1,6 +1,8 @@
-function [fftCov,dfftCov] = getSpecHelper(kernel,params,T)
+function [fftCov,dfftCov] = getVFESpecHelper(kernel,params,T)
 	if (strcmpi(kernel.name,'SE'))
-		% TODO
+		varx = exp(params(1));
+		lenx = exp(params(2));
+		[fftCov,dfftCov] = getGPSEisoSpec(varx,lenx,T);
 	elseif (strcmpi(kernel.name,'SM'))
 		K = length(params)/3;
 		% params of the covariance function

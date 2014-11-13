@@ -12,42 +12,44 @@ close all;
 dispFigs=1;
 randn('state',1)
 
-notrials = 3;
-L = 30;
-lenxs = logspace(log10(10),log10(1000),L);
+notrials = 1;
+%L = 10;
+%lenxs = logspace(log10(10),log10(500),L);
+L = 1;
+lenxs = logspace(log10(50),log10(50),L);
 %freqxs = [0.01 0.05 0.1 0.2 0.25 0.3 0.4];
-freqxs = 0.01;
 freqxsUsed = zeros(notrials,L);
 varxsUsed = zeros(notrials,L);
 lenxsEst = zeros(notrials,L);
 varxsEst = zeros(notrials,L);
 freqxsEst = zeros(notrials,L);
 varysEst = zeros(notrials,L);
+vary = 0.2;
 
-T = 1024*8;
+T = 1000;
+freqxs = 0.1;
 setup.numIts = 500;
 setup.progress_chunk = setup.numIts;
 
-M = 1000;
+M = 100;
 
 for n = 1:notrials
     for l = 1:L
         fprintf('Trial %d/%d, l %d/%d\n',n,notrials,l,L);
         lenx = lenxs(l);
         %varx = 0.2+exp(randn);
-        varx = 0.2;
+        varx = 1;
         freqx = freqxs(randi(length(freqxs),1));
         freqxsUsed(n,l) = freqx;
         varxsUsed(n,l) = varx;
         
-        ytrue = sampleGPSM(varx,lenx,freqx,T);
-        y = ytrue + 0.3*randn(T,1);
-        
-        kernel.name = 'SM';
-        kernel.K = 1;
-        params = [log(varx),log(lenx),log(freqx),log(0.1)]';
+        %ytrue = sampleGPSM(varx,lenx,freqx,T);
+        ytrue = sampleGPSE(varx,lenx,T).*cos(2*pi*freqx*(0:T-1)') + sampleGPSE(varx,lenx,T).*sin(2*pi*freqx*(0:T-1)');
 
-        [params,info] = trainSparseGP(y,kernel,M,setup,params);
+        y = ytrue + sqrt(vary)*randn(T,1);
+        
+        params = [log(varx),log(lenx),log(freqx),log(vary)]';
+        [params,info] = trainVFESMFFT(y,M,setup,params);
 
         lenxsEst(n,l) = exp(params(2));
         varxsEst(n,l) = exp(params(1));
@@ -88,8 +90,8 @@ fprintf('varx - average percentage error %f %% \n',100*mean(dl(:)));
 dl = abs(freqxsUsed-freqxsEst)./freqxsUsed;
 fprintf('freqx - average percentage error %f %% \n',100*mean(dl(:)));
 
-oriSpec = getSpecHelper(kernel,params(1:end-1),T);
-[mf,vf] = denoiseSparseGP(y,oriSpec,exp(params(end)),M);
+
+[mf,vf] = denoiseVFESMFFT(y,params,M,'y',1);
 figure, hold on,
 plot(1:T,y,'-','Color',[0.85 0.85 0.85]), 
 plot(1:T,ytrue,'-b',1:T,mf,'-r',1:T,mf-2*sqrt(vf),'-r',1:T,mf+2*sqrt(vf),'--r')
@@ -98,5 +100,6 @@ legend('noisy','true','predicted');
 fprintf('lenx %f, lenxEst %f\n', lenx, exp(params(2)))
 fprintf('varx %f, varxEst %f\n', varx, exp(params(1)))
 fprintf('freqx %f, freqxEst %f\n', freqx, exp(params(3)))
+fprintf('vary %f, varyEst %f\n', vary, exp(params(end)))
 keyboard
 end

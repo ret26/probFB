@@ -1,4 +1,4 @@
-function test_denoiseSparseGP
+function test_denoiseVFEFFT
    % initTestSuite;
     test_notraining;
 end
@@ -12,7 +12,7 @@ function test_notraining
     y = ytrue + sqrt(vary)*randn(T,1);
     M = 100;
     oriSpec = getGPSESpec(lenx,T);
-    [mf,vf] = denoiseSparseGP(y,oriSpec,vary,M);
+    [mf,vf] = denoiseVFEFFT(y,oriSpec,vary,M);
     figure
     plot(1:T,y,'-b',1:T,ytrue,'-r',1:T,mf,'-g',...
          1:T,mf+2*sqrt(vf),'--g',1:T,mf-2*sqrt(vf),'--g');
@@ -20,6 +20,5 @@ function test_notraining
 end
 
 function test_withtraining
-    
 end
 

@@ -1,8 +1,6 @@
-function [params,info] = trainSparseGP(y,kernel,M,varargin)
-
+function [params,info] = trainVFESMFFT(y,M,varargin)
 % kernel.name = SE or SM
 % for SM, kernel.K specifies the number of components in the mixture
-
 
 if nargin>3 && isfield(varargin{1},'numIts')
     numIts = varargin{1}.numIts;
@@ -19,7 +17,7 @@ end
 specy = abs(fft(y)).^2;
 T = length(y);
 % initialisation if user doesn't provide starting values
-if nargin<5
+if nargin<4
     % TODO: init params depending on the kernel provided
     error('TODO: init params')
 else
@@ -35,8 +33,8 @@ for l=1:L
     
     % run conjugate gradient update
     tic;
-    [params, ObjCur, itCur] = minimize(params,'getObjSparseGP', ...
-        numIts(l),specy,kernel,M);
+    [params, ObjCur, itCur] = minimize(params,'getObjVFESMFFT', ...
+        numIts(l),specy,M);
     
     timCur = toc;
     % Store objective and iteration information

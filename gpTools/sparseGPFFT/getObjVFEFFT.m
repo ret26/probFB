@@ -1,8 +1,8 @@
-function [f,varargout] = getObjSparseGP(params,specy,kernel,M)
+function [f,varargout] = getObjVFEFFT(params,specy,kernel,M)
 	T = length(specy);
 	hypers = params(1:end-1);
 	vary = exp(params(end));
-	[fftCov,dfftCov] = getSpecHelper(kernel,hypers,T);
+	[fftCov,dfftCov] = getVFESpecHelper(kernel,hypers,T);
 
 	halfM = floor(M/2);
 	indM  = [1:halfM T-halfM+1:T];
