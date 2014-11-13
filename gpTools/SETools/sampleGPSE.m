@@ -15,7 +15,7 @@ function x = sampleGPSE(varx,lenx,T)
 % x = realisation from a GP with a squared exponential kernel, size [T,1]
 
 
-tau = 5*lenx; % offset added to avoid wrap-around effects 
+tau = 10*lenx; % offset added to avoid wrap-around effects 
 
 Tx = 2^ceil(log2(T+tau)); % make the duration a power of 2 so the
                           % fft is faster

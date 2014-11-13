@@ -38,10 +38,10 @@ pks     = pks/min(pks)+1;
 
 sigstd = std(s);
 params = zeros(K*3+1,1);
-params(2:3:3*K)     = log(50);      % lengthscales=50 for now
-params(1:3:3*K)     = log(pks/2);     % varx
+params(2:3:3*K)     = log(200);      % lengthscales=50 for now
+params(1:3:3*K)     = log(pks/1000);     % varx
 params(3:3:3*K)     = log(fpeaks);  % frequencies
-params(3*K+1)       = log(1/5*sigstd);  % vary
+params(3*K+1)       = log(sigstd);  % vary
 
 if length(varargin) == 1
     opt = varargin{1};
@@ -49,6 +49,7 @@ if length(varargin) == 1
         pxxlog = 10*log10(pxx);
         figure(1), plot(f,pxxlog,'-b',fpeaks,pxxlog(locs),'+r')
         xlabel('freq'), ylabel('power (dB)');
+        keyboard
     end
 end
 

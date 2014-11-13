@@ -5,4 +5,7 @@
 # ignore compiled mex
 *.mex*
 
+# ignore MAC DS_Store
+*.DS_Store*
+
 # add more ignores here!

@@ -47,9 +47,9 @@ df = df/T;
 debug = 0;
 if (debug)
     fftCovTrue = getGPSMSpec(0.2,500,0.2,T);
-    figure(1), plot(1:T,specy/T,1:T,fftCov,1:T,fftCovTrue), 
+    figure(10), plot(1:T,specy/T,1:T,fftCov,1:T,fftCovTrue), 
     legend('specy','specCov','true'), %pause(0.01)
-    xlim(T*freqs + [-100 100]) 
+    %xlim(T*freqs + [-100 100]) 
     drawnow
 end
 

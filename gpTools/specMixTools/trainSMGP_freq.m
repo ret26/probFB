@@ -33,7 +33,7 @@ T = length(y);
 % initialisation if user doesn't provide starting values
 if nargin<5
     % picking peaks in the freq domain, need to set win size and overlap
-    params = initSMParams(y,K,100,0.5);
+    params = initSMParams(y,K,800,0.5);
     varx = exp(params(1:3:3*K));
     lenx = exp(params(2:3:3*K));
     freqs = exp(params(3:3:3*K));
@@ -46,14 +46,13 @@ else
     vary = varargin{5};
     params1 = [varx(:) lenx(:) freqs(:)]';
     params1 = params1(:);
-    params = [params1; vary];
+    params = log([params1; vary]);
 end
+
 L = ceil(numIts/progress_chunk);
 numIts = ones(L,1)*progress_chunk;
 
 Obj = []; it = []; tim = [];
-
-
 
 for l=1:L
     % save old parameters
@@ -96,9 +95,9 @@ for l=1:L
     str4 = ['time ',num2str(ceil(timCur/6)/10),'mins'];
     str5 = ['total time ',num2str(ceil(sum(tim)/6)/10),'mins'];
     str6 = ['vary ',num2str(vary)];
-    str7 = ['varx ',num2str(varx)];
-    str8 = ['lenx ',num2str(lenx)];
-    str9 = ['freqs ',num2str(freqs)];
+    str7 = ['varx ',num2str(varx')];
+    str8 = ['lenx ',num2str(lenx')];
+    str9 = ['freqs ',num2str(freqs')];
     
     str_space = '   ';
     
