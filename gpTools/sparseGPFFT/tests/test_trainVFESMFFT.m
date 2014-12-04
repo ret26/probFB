@@ -1,4 +1,4 @@
-function test_suite = test_trainSparseGP
+function test_suite = test_trainVFESMFFT
 % written by Richard Turner
 % modified by Thang Bui
 % initTestSuite

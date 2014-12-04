@@ -117,4 +117,3 @@ function learnGaussian_speech
 
 	keyboard
 end
-

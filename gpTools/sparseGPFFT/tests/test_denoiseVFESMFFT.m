@@ -1,7 +1,7 @@
 function test_denoiseVFESMFFT
 
 	test_notraining_y_1
-    test_notraining_y_2
+    %test_notraining_y_2
 	test_notraining_f
 	test_notraining_u
 end
